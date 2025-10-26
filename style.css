@@ -40,7 +40,7 @@ nav {
 /* ========== Hero Section ========== */
 .hero-section {
     height: 100vh;
-    background: url("pictures/hero.jpg") center/cover no-repeat fixed;
+    background: url("pictures/photo00014.jpg") center/cover no-repeat fixed;
     position: relative;
     display: flex;
     align-items: center;
@@ -573,7 +573,7 @@ nav {
 ================================= */
 .hero-section {
     height: 100vh;
-    background: url("pictures/hero.jpg") center/cover no-repeat fixed;
+    background: url("pictures/photo00014.jpg") center/cover no-repeat fixed;
     display: flex;
     align-items: center;
     justify-content: center;

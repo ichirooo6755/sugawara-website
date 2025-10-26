@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gallery - SGWR Portfolio</title>
+
+    <!-- lightGallery CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/css/lightgallery-bundle.min.css" />
+
+    <style>
+        :root {
+            --bg: #fff;
+            --text: #111;
+            --muted: #777;
+            --accent: #ffcc00;
+        }
+
+        body {
+            margin: 0;
+            font-family: Inter, "Noto Sans JP", system-ui;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        /* ナビゲーション */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 24px;
+            background: #f4f4f4;
+            position: sticky;
+            top: 0;
+            z-index: 5;
+        }
+
+        .nav-left {
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 18px;
+        }
+
+        .nav-links a {
+            color: inherit;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        header.page-title {
+            padding: 48px 24px;
+            text-align: center;
+        }
+
+        header.page-title h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* ギャラリー */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            align-items: stretch;
+        }
+
+        .card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+            cursor: pointer;
+            background: #eee;
+        }
+
+        .card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.45s ease, opacity 0.3s;
+        }
+
+        .card:hover img {
+            transform: scale(1.06);
+        }
+
+        .caption {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 10px 12px;
+            background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.45) 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 0.95rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .caption .id {
+            opacity: 0.95;
+        }
+
+        .caption a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        @media (max-width: 600px) {
+            .caption {
+                font-size: 0.9rem;
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <div class="nav-left">SGWR Portfolio</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="gallery.html" aria-current="page">Gallery</a>
+            <a href="article.html">Article</a>
+        </div>
+    </nav>
+
+    <header class="page-title">
+        <h1>Gallery</h1>
+        <p style="color:var(--muted);margin-top:8px">
+            クリックで拡大・ブラウズできます（LightGallery）
+        </p>
+    </header>
+
+    <main class="container">
+        <div id="lightgallery" class="gallery-grid"></div>
+    </main>
+
+    <!-- lightGallery 本体 -->
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/lightgallery.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/plugins/zoom/lg-zoom.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/plugins/thumbnail/lg-thumbnail.umd.min.js"></script>
+
+    <script>
+        // ====== 設定 ======
+        const TOTAL = 17; // 画像の総数に合わせて変更
+        const wrapper = document.getElementById('lightgallery');
+
+        for (let i = 1; i <= TOTAL; i++) {
+            const fileNumber = String(i).padStart(5, '0'); // photo00001 形式
+            const fileName = `photo${fileNumber}.jpg`;
+            const path = `pictures/${fileName}`;
+
+            const a = document.createElement('a');
+            a.href = path;
+            a.setAttribute('data-sub-html', `<div>写真 #${i} — <a href="article.html?photo=${i}">記事へ</a></div>`);
+
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            const img = document.createElement('img');
+            img.src = path;
+            img.alt = `photo${fileNumber}`;
+
+            const caption = document.createElement('div');
+            caption.className = 'caption';
+            caption.innerHTML = `<span class="id">#${i}</span><a href="article.html?photo=${i}">View</a>`;
+
+            card.appendChild(img);
+            card.appendChild(caption);
+            a.appendChild(card);
+            wrapper.appendChild(a);
+        }
+
+        // ====== lightGallery 初期化 ======
+        lightGallery(wrapper, {
+            plugins: [lgZoom, lgThumbnail],
+            licenseKey: '0000-0000',
+            speed: 400,
+            download: false,
+            thumbnail: true,
+            zoom: true
+        });
+    </script>
+</body>
+
+</html>
