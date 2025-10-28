@@ -747,3 +747,72 @@ nav {
 ================================= */
 /* あなたの提示コードをそのまま全収録 */
 
+
+/* ===== 記事一覧ページ ===== */
+.article-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+    padding: 120px 40px 60px;
+}
+
+.article-card {
+    display: block;
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    background-color: #1f1f1f;
+    transition: transform 0.3s, box-shadow 0.3s, border 0.3s;
+    border: 2px solid transparent;
+}
+
+.article-card img {
+    width: 100%;
+    display: block;
+    transition: transform 0.3s;
+}
+
+.article-card h2 {
+    margin: 1rem;
+    font-size: 1.3rem;
+    color: #ffcc00;
+    position: relative;
+}
+
+.article-card::after {
+    content: '';
+    display: block;
+    width: 0;
+    height: 3px;
+    background-color: #ffcc00;
+    margin: 0 1rem 1rem;
+    transition: width 0.3s;
+}
+
+.article-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+    border-color: #ffcc00;
+}
+
+.article-card:hover img {
+    transform: scale(1.05);
+}
+
+.article-card:hover::after {
+    width: calc(100% - 2rem);
+}
+
+/* ===== ダークモード ===== */
+body.dark .article-card {
+    background-color: #2b2b2b;
+}
+
+body.dark .article-card h2 {
+    color: #ffcc00;
+}
+
+body.dark .article-card:hover {
+    border-color: #ffcc00;
+}
