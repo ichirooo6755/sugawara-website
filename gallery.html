@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Gallery | SGWR</title>
+
+    <!-- lightGallery - bundle CSS（コア＋プラグインのCSSを含む） -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/css/lightgallery-bundle.min.css">
+
+    <!-- カスタム CSS -->
+    <link rel="stylesheet" href="gallery.css">
+</head>
+
+<body>
+    <header class="site-header">
+        <nav class="navbar">
+            <div class="logo">SGWR</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="gallery.html">Gallery</a></li>
+                <li><a href="article.html">Articles</a></li>
+                <li><a href="about.html">About</a></li>
+            </ul>
+        </nav>
+
+    </header>
+
+    <section class="controls-wrapper">
+        <div class="controls">
+            <button class="control-btn" data-sort="asc">▲ 昇順</button>
+            <button class="control-btn" data-sort="desc">▼ 降順</button>
+
+            <div class="filters" aria-hidden="false">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="portrait">Portrait</button>
+                <button class="filter-btn" data-filter="street">Street</button>
+                <button class="filter-btn" data-filter="nature">Nature</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ギャラリー本体（JS が中身を作る） -->
+    <main id="gallery" class="gallery" aria-live="polite"></main>
+
+    <!-- EXIF.js -->
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+
+    <!-- lightGallery UMD（コア + プラグインUMD） -->
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/lightgallery.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/plugins/zoom/lg-zoom.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/plugins/thumbnail/lg-thumbnail.umd.min.js"></script>
+
+    <!-- カスタム JS -->
+    <script src="gallery.js"></script>
+</body>
+
+</html>
