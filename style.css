@@ -816,3 +816,6 @@ body.dark .article-card h2 {
 body.dark .article-card:hover {
     border-color: #ffcc00;
 }
+.sort-buttons {
+    margin-top: 20px; /* 必要に応じて数値を変更 */
+}
