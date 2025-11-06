@@ -1,821 +1,188 @@
-/* ========== 全体の基本設定 ========== */
+/* ========== 全体の基本設定 (NAPLPS風) ========== */
 body {
+    background-color: #000;
+    color: #FFF;
     margin: 0;
-    font-family: "Helvetica Neue", Arial, sans-serif;
-    color: #333;
-    background-color: #fff;
-    transition: background 0.5s, color 0.5s;
+    padding: 10px;
+    font-family: "DotGothic16", "MS Gothic", sans-serif;
+    overflow-y: scroll;
 }
 
+* {
+    border-radius: 0 !important;
+    box-sizing: border-box;
+}
+
+/* ========== 端末画面コンテナ ========== */
+#terminal-screen {
+    position: relative; /* SVGの基点 */
+    width: 100%;
+    min-height: calc(100vh - 20px);
+    padding: 10px;
+    opacity: 0;
+}
+
+/* ========== 共通コンテナ（枠線） ========== */
+.draw-container {
+    position: relative; /* SVGの基点 */
+    margin-bottom: 10px;
+    padding: 10px;
+    opacity: 0; /* JSが描画時に表示 */
+}
+
+/* ========== 動的SVG（枠線） ========== */
+.dynamic-svg-border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    z-index: 1;
+}
+
+.dynamic-svg-border line {
+    fill: none;
+    stroke-linecap: square;
+    transition: stroke 0.2s, stroke-width 0.2s;
+}
+
+/* アニメーション対象のテキスト要素 */
+.draw-element {
+    opacity: 0; /* JSが描画時に 1 にする */
+    /* text-shadow と color の切り替えを高速化 */
+    transition: color 0.1s, text-shadow 0.1s, background-color 0.1s;
+    position: relative;
+    z-index: 2;
+}
+
+/* ========== ナビゲーションバー ========== */
 nav {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 40px;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-    position: fixed;
-    width: 100%;
-    z-index: 1000;
+    background: #000;
+    padding: 5px;
 }
 
 .nav-left {
     font-size: 1.4em;
     font-weight: bold;
-    color: #222;
+    padding: 5px 10px;
 }
 
 .nav-links a {
-    margin: 0 15px;
+    color: #FF0;
     text-decoration: none;
-    color: #666;
-    transition: color 0.3s;
+    margin: 0 5px;
 }
 
-.nav-links a.active,
-.nav-links a:hover {
-    color: #ffcc00;
-}
-
-/* ========== Hero Section ========== */
-.hero-section {
-    height: 100vh;
-    background: url("pictures/photo00014.jpg") center/cover no-repeat fixed;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.hero-overlay {
-    background: rgba(0, 0, 0, 0.4);
-    color: white;
-    text-align: center;
-    padding: 60px;
-    border-radius: 20px;
-}
-
-.hero-title {
-    font-size: 4em;
-    font-weight: bold;
-    letter-spacing: 4px;
-}
-
-.hero-subtitle {
-    font-size: 1.5em;
-    color: #ffcc00;
-}
+/* ========== Hero Section（タイトル） ========== */
+.hero-section { background: #000; display: block; }
+.hero-overlay { background: none; padding: 0; text-align: left; }
+.hero-title { font-size: 2.5em; margin: 0; line-height: 1.3; }
 
 /* ========== コメントセクション ========== */
-.comment-section {
-    padding: 80px 20px;
-    max-width: 800px;
-    margin: 0 auto;
-    text-align: center;
-}
+.comment-section { background: #000; text-align: left; }
+.comment-section h2 { margin-top: 0; }
 
-.comment-section h2 {
-    margin-bottom: 20px;
-}
-
-#comment-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
+#comment-form { display: flex; flex-direction: column; gap: 10px; }
 
 #comment-form input,
 #comment-form textarea {
-    padding: 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    font-size: 1em;
+    background: #000; color: #FFF; border: 2px solid #FF0;
+    padding: 10px; font-size: 1em; font-family: inherit; z-index: 2;
 }
 
 #comment-form button {
-    background-color: #ffcc00;
-    border: none;
-    color: #000;
-    font-weight: bold;
-    padding: 10px;
-    cursor: pointer;
-    border-radius: 6px;
-    transition: background 0.3s;
+    background-color: #FF0; border: 2px solid #FF0; color: #000;
+    font-weight: bold; padding: 10px; cursor: pointer;
+    font-family: inherit; font-size: 1em; z-index: 2;
 }
+#comment-form button:hover { background-color: #000; color: #FF0; }
 
-#comment-form button:hover {
-    background-color: #ffdd33;
-}
-
-#comment-list {
-    margin-top: 30px;
-    list-style: none;
-    padding: 0;
-}
-
+#comment-list { list-style: none; padding: 0; margin-top: 10px; }
 #comment-list li {
-    background: #f9f9f9;
-    margin-bottom: 10px;
-    padding: 10px;
-    border-radius: 5px;
+    background: #000; color: #FFF; margin-bottom: 10px;
+    padding: 10px; position: relative; opacity: 0;
+}
+#comment-list li strong { color: #FF0; }
+
+footer { text-align: center; padding: 10px; }
+
+/* =======================================
+   アニメーション用スタイル (枠線 -> 塗りつぶし)
+   ======================================= */
+
+/* --- 共通 --- */
+.drawing-element-pre {
+    opacity: 1;
+    color: transparent; /* 中身は透明 */
+}
+.drawing-element-post {
+    opacity: 1;
+    text-shadow: none; /* 枠線は消す */
 }
 
-/* ========== フッター ========== */
-footer {
-    text-align: center;
-    padding: 20px;
+/* --- タイプ: block-red (例: 特急) --- */
+.block-red-pre {
+    /* 薄い赤の枠線 */
+    text-shadow: 1px 0 0 #F00, -1px 0 0 #F00, 0 1px 0 #F00, 0 -1px 0 #F00;
+}
+.block-red-post {
+    /* 赤背景・白文字 (塗りつぶし) */
+    background-color: #F00;
+    color: #FFF;
+}
+
+/* --- タイプ: text-white (例: 座席表) --- */
+.text-white-pre {
+    /* 薄い白の枠線 */
+    text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555;
+}
+.text-white-post {
+    /* 白文字 (塗りつぶし) */
+    color: #FFF;
+}
+
+/* --- タイプ: text-yellow (例: リンク) --- */
+.text-yellow-pre {
+    /* 薄い黄色の枠線 */
+    text-shadow: 1px 0 0 #550, -1px 0 0 #550, 0 1px 0 #550, 0 -1px 0 #550;
+}
+.text-yellow-post {
+    /* 黄文字 (塗りつぶし) */
+    color: #FF0;
+}
+
+/* --- タイプ: text-gray (例: フッター) --- */
+.text-gray-pre {
+    /* 薄いグレーの枠線 */
+    text-shadow: 1px 0 0 #444, -1px 0 0 #444, 0 1px 0 #444, 0 -1px 0 #444;
+}
+.text-gray-post {
+    /* グレー文字 (塗りつぶし) */
     color: #888;
 }
 
-/* ========== ダークモード全体 ========== */
-body.dark {
-    background-color: #121212;
-    color: #eee;
-}
-
-body.dark nav {
-    background: rgba(20, 20, 20, 0.9);
-}
-
-body.dark .hero-overlay {
-    background: rgba(0, 0, 0, 0.6);
-}
-
-body.dark #comment-form input,
-body.dark #comment-form textarea {
-    background: #333;
-    color: #eee;
-    border: 1px solid #555;
-}
-
-body.dark #comment-form button {
-    background-color: #ffcc00;
-    color: #000;
-}
-
-body.dark #comment-list li {
-    background: #1e1e1e;
-}
-
-/* ========== あなた提供のスイッチCSS完全版 ========== */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 60px;
-    height: 34px;
-}
-
-.switch #input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #2196f3;
-    transition: 0.4s;
-    z-index: 0;
-    overflow: hidden;
-}
-
-.sun-moon {
-    position: absolute;
-    content: "";
-    height: 26px;
-    width: 26px;
-    left: 4px;
-    bottom: 4px;
-    background-color: yellow;
-    transition: 0.4s;
-}
-
-#input:checked+.slider {
-    background-color: black;
-}
-
-#input:focus+.slider {
-    box-shadow: 0 0 1px #2196f3;
-}
-
-#input:checked+.slider .sun-moon {
-    transform: translateX(26px);
-    background-color: white;
-    animation: rotate-center 0.6s ease-in-out both;
-}
-
-.moon-dot {
-    opacity: 0;
-    transition: 0.4s;
-    fill: gray;
-}
-
-#input:checked+.slider .sun-moon .moon-dot {
-    opacity: 1;
-}
-
-.slider.round {
-    border-radius: 34px;
-}
-
-.slider.round .sun-moon {
-    border-radius: 50%;
-}
-
-/* ===== 月のドット位置 ===== */
-#moon-dot-1 {
-    left: 10px;
-    top: 3px;
-    position: absolute;
-    width: 6px;
-    height: 6px;
-    z-index: 4;
-}
-
-#moon-dot-2 {
-    left: 2px;
-    top: 10px;
-    position: absolute;
-    width: 10px;
-    height: 10px;
-    z-index: 4;
-}
-
-#moon-dot-3 {
-    left: 16px;
-    top: 18px;
-    position: absolute;
-    width: 3px;
-    height: 3px;
-    z-index: 4;
-}
-
-/* ===== 光の輪 ===== */
-#light-ray-1 {
-    left: -8px;
-    top: -8px;
-    position: absolute;
-    width: 43px;
-    height: 43px;
-    z-index: -1;
-    fill: white;
-    opacity: 10%;
-}
-
-#light-ray-2 {
-    left: -50%;
-    top: -50%;
-    position: absolute;
-    width: 55px;
-    height: 55px;
-    z-index: -1;
-    fill: white;
-    opacity: 10%;
-}
-
-#light-ray-3 {
-    left: -18px;
-    top: -18px;
-    position: absolute;
-    width: 60px;
-    height: 60px;
-    z-index: -1;
-    fill: white;
-    opacity: 10%;
-}
-
-/* ===== 雲のアニメーション ===== */
-.cloud-light {
-    position: absolute;
-    fill: #eee;
-    animation-name: cloud-move;
-    animation-duration: 6s;
-    animation-iteration-count: infinite;
-}
-
-.cloud-dark {
-    position: absolute;
-    fill: #ccc;
-    animation-name: cloud-move;
-    animation-duration: 6s;
-    animation-iteration-count: infinite;
-    animation-delay: 1s;
-}
-
-#cloud-1 {
-    left: 30px;
-    top: 15px;
-    width: 40px;
-}
-
-#cloud-2 {
-    left: 44px;
-    top: 10px;
-    width: 20px;
-}
-
-#cloud-3 {
-    left: 18px;
-    top: 24px;
-    width: 30px;
-}
-
-#cloud-4 {
-    left: 36px;
-    top: 18px;
-    width: 40px;
-}
-
-#cloud-5 {
-    left: 48px;
-    top: 14px;
-    width: 20px;
-}
-
-#cloud-6 {
-    left: 22px;
-    top: 26px;
-    width: 30px;
-}
-
-@keyframes cloud-move {
-    0% {
-        transform: translateX(0px);
-    }
-
-    40% {
-        transform: translateX(4px);
-    }
-
-    80% {
-        transform: translateX(-4px);
-    }
-
-    100% {
-        transform: translateX(0px);
-    }
-}
-
-/* ===== 星のアニメーション ===== */
-.stars {
-    transform: translateY(-32px);
-    opacity: 0;
-    transition: 0.4s;
-}
-
-.star {
-    fill: white;
-    position: absolute;
-    transition: 0.4s;
-    animation-name: star-twinkle;
-    animation-duration: 2s;
-    animation-iteration-count: infinite;
-}
-
-#input:checked+.slider .stars {
-    transform: translateY(0);
-    opacity: 1;
-}
-
-#star-1 {
-    width: 20px;
-    top: 2px;
-    left: 3px;
-    animation-delay: 0.3s;
-}
-
-#star-2 {
-    width: 6px;
-    top: 16px;
-    left: 3px;
-}
-
-#star-3 {
-    width: 12px;
-    top: 20px;
-    left: 10px;
-    animation-delay: 0.6s;
-}
-
-#star-4 {
-    width: 18px;
-    top: 0px;
-    left: 18px;
-    animation-delay: 1.3s;
-}
-
-@keyframes star-twinkle {
-    0% {
-        transform: scale(1);
-    }
-
-    40% {
-        transform: scale(1.2);
-    }
-
-    80% {
-        transform: scale(0.8);
-    }
-
-    100% {
-        transform: scale(1);
-    }
-}
-
-@keyframes rotate-center {
-    0% {
-        transform: rotate(0);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-/* ===== Heroセクションの改良 ===== */
-.hero-section {
-    height: 100vh;
-    background: url("https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1920&q=80") center/cover no-repeat fixed;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-    overflow: hidden;
-}
-
-.hero-overlay {
-    background: rgba(0, 0, 0, 0.55);
-    padding: 60px;
-    border-radius: 20px;
-    color: white;
-    text-align: center;
-    animation: fadeIn 2s ease-in-out forwards;
-}
-
-.hero-title {
-    font-size: 4em;
-    letter-spacing: 2px;
-    animation: slideInUp 1.8s ease-out;
-}
-
-.hero-subtitle {
-    font-size: 1.4em;
-    color: #ffcc00;
-    animation: fadeIn 3s ease-in;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes slideInUp {
-    from {
-        transform: translateY(40px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* ===== 自己紹介セクション ===== */
-.about-section {
-    background: #f8f8f8;
-    color: #333;
-    padding: 80px 20px;
-    text-align: center;
-}
-
-.about-container {
-    max-width: 900px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 40px;
-    flex-wrap: wrap;
-}
-
-.about-photo {
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    object-fit: cover;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.about-text {
-    max-width: 500px;
-    text-align: left;
-}
-
-.about-text h3 {
-    color: #ffcc00;
-    font-size: 1.6em;
-}
-
-/* ===============================
-   基本構成
-================================= */
-body {
-    margin: 0;
-    font-family: "Noto Sans JP", sans-serif;
-    color: #333;
-    background-color: #fff;
-}
-
-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 60px;
-    background: rgba(255, 255, 255, 0.9);
-    position: fixed;
-    width: 100%;
-    top: 0;
-    z-index: 999;
-    backdrop-filter: blur(10px);
-}
-
-.nav-left {
-    font-size: 1.5em;
-    font-weight: bold;
-    color: #ffcc00;
-}
-
-.nav-links a {
-    margin-left: 20px;
-    text-decoration: none;
-    color: #555;
-    font-weight: 500;
-    transition: color 0.3s ease;
-}
-
-.nav-links a:hover {
-    color: #ffcc00;
-}
-
-/* ===============================
-   Heroセクション
-================================= */
-.hero-section {
-    height: 100vh;
-    background: url("pictures/photo00014.jpg") center/cover no-repeat fixed;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-}
-
-.hero-overlay {
-    background: rgba(0, 0, 0, 0.55);
-    padding: 60px;
-    border-radius: 20px;
-    color: white;
-    text-align: center;
-    animation: fadeIn 2s ease-in-out forwards;
-}
-
-.hero-title {
-    font-size: 4em;
-    letter-spacing: 2px;
-    animation: slideInUp 1.8s ease-out;
-}
-
-.hero-subtitle {
-    font-size: 1.4em;
-    color: #ffcc00;
-    animation: fadeIn 3s ease-in;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-}
-
-@keyframes slideInUp {
-    from {
-        transform: translateY(40px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* ===============================
-   コメントフォーム
-================================= */
-.comment-section {
-    padding: 100px 20px;
-    background: #fafafa;
-    text-align: center;
-}
-
-.comment-section h2 {
-    font-size: 2em;
-    color: #333;
-    margin-bottom: 40px;
-}
-
-/* 入力デザイン */
-.inputContainer {
-    position: relative;
-    margin-bottom: 20px;
-    max-width: 500px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.customInput {
-    width: 100%;
-    padding: 12px;
-    font-size: 16px;
-    background-color: transparent;
-    border: none;
-    border-bottom: 2px solid #007bff;
-    outline: none;
-    transition: border-color 0.3s ease;
-    color: #007bff;
-}
-
-.customInput:focus,
-.customInput:not(:placeholder-shown) {
-    border-color: #0056b3;
-}
-
-.inputLabel {
-    position: absolute;
-    top: 0;
-    left: 0;
-    pointer-events: none;
-    padding: 5px;
-    font-size: 16px;
-    color: #007bff;
-    transition: transform 0.3s ease, color 0.3s ease;
-}
-
-.customInput:focus+.inputLabel,
-.customInput:not(:placeholder-shown)+.inputLabel {
-    transform: translateY(-100%) translateX(-5px) scale(0.8);
-}
-
-.inputUnderline {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background-color: #007bff;
-}
-
-.submit-btn {
-    background-color: #ffcc00;
-    border: none;
-    padding: 10px 30px;
-    color: #333;
-    font-weight: bold;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-
-.submit-btn:hover {
-    background-color: #ffd633;
-}
-
-/* ===============================
-   自己紹介
-================================= */
-.about-section {
-    background: #f8f8f8;
-    color: #333;
-    padding: 80px 20px;
-    text-align: center;
-}
-
-.about-container {
-    max-width: 900px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 40px;
-    flex-wrap: wrap;
-}
-
-.about-photo {
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    object-fit: cover;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
-
-.about-text {
-    max-width: 500px;
-    text-align: left;
-}
-
-.about-text h3 {
-    color: #ffcc00;
-    font-size: 1.6em;
-}
-
-/* ===============================
-   ナイトモードスイッチ（完全収録）
-================================= */
-/* あなたの提示コードをそのまま全収録 */
-
-
-/* ===== 記事一覧ページ ===== */
-.article-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 2rem;
-    padding: 120px 40px 60px;
-}
-
-.article-card {
-    display: block;
-    border-radius: 12px;
-    overflow: hidden;
-    text-decoration: none;
-    color: inherit;
-    background-color: #1f1f1f;
-    transition: transform 0.3s, box-shadow 0.3s, border 0.3s;
-    border: 2px solid transparent;
-}
-
-.article-card img {
-    width: 100%;
-    display: block;
-    transition: transform 0.3s;
-}
-
-.article-card h2 {
-    margin: 1rem;
-    font-size: 1.3rem;
-    color: #ffcc00;
-    position: relative;
-}
-
-.article-card::after {
-    content: '';
-    display: block;
-    width: 0;
-    height: 3px;
-    background-color: #ffcc00;
-    margin: 0 1rem 1rem;
-    transition: width 0.3s;
-}
-
-.article-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-    border-color: #ffcc00;
-}
-
-.article-card:hover img {
-    transform: scale(1.05);
-}
-
-.article-card:hover::after {
-    width: calc(100% - 2rem);
-}
-
-/* ===== ダークモード ===== */
-body.dark .article-card {
-    background-color: #2b2b2b;
-}
-
-body.dark .article-card h2 {
-    color: #ffcc00;
-}
-
-body.dark .article-card:hover {
-    border-color: #ffcc00;
-}
-.sort-buttons {
-    margin-top: 20px; /* 必要に応じて数値を変更 */
+/* --- タイプ: comment (コメント用) --- */
+.comment-pre {
+    /* 薄い白の枠線 */
+    text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555;
+    color: transparent;
+}
+.comment-pre strong {
+    /* 枠線時は名前も枠線 */
+    color: transparent;
+    text-shadow: 1px 0 0 #550, -1px 0 0 #550, 0 1px 0 #550, 0 -1px 0 #550;
+}
+.comment-post {
+    /* 白文字 (塗りつぶし) */
+    color: #FFF;
+    text-shadow: none;
+}
+.comment-post strong {
+    /* 黄文字 (塗りつぶし) */
+    color: #FF0;
+    text-shadow: none;
 }
