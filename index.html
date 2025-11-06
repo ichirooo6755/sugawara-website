@@ -27,22 +27,27 @@
 
         <main class="comment-section draw-container" data-draw="container">
             <h2 data-draw="element" data-draw-type="text-white">Comments</h2>
-            
+
             <form id="comment-form" class="draw-container" data-draw="container">
-                <input type="text" name="name" placeholder="お名前" required />
-                <textarea name="comment" placeholder="コメントを入力..." required></textarea>
-                <button type="submit">送信</button>
+                <input type="text" name="name" placeholder="お名前" required data-draw="element"
+                    data-draw-type="form-input" />
+
+                <textarea name="comment" placeholder="コメントを入力..." required data-draw="element"
+                    data-draw-type="form-input"></textarea>
+
+                <button type="submit" data-draw="element" data-draw-type="form-button">送信</button>
             </form>
 
             <ul id="comment-list">
-                </ul>
+            </ul>
         </main>
 
         <footer class="draw-container" data-draw="container">
             <p data-draw="element" data-draw-type="text-gray">© 2025 SGWR Portfolio</p>
         </footer>
 
-    </div> <script src="script.js"></script>
+    </div>
+    <script src="script.js"></script>
 </body>
 
 </html>

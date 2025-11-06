@@ -15,7 +15,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
  * @param {SVGGeometryElement} el - 対象のline/polyline要素
  * @param {number} duration - アニメーション時間 (ms)
  */
-function animateStroke(el, duration) { // animateLine からリネーム
+function animateStroke(el, duration) {
     return new Promise(resolve => {
         const length = parseFloat(el.dataset.length);
         let startTime = null;
@@ -47,6 +47,10 @@ async function drawBorderSVG(container) {
     // 0. コンテナの寸法を正確に測定
     const w = container.offsetWidth;
     const h = container.offsetHeight;
+    if (w <= 2 || h <= 2) { // 描画できないほど小さい要素はスキップ
+        container.style.opacity = '1'; // コンテナだけ表示
+        return;
+    }
 
     // 1. SVG要素を生成
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -54,9 +58,7 @@ async function drawBorderSVG(container) {
     svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
 
     // 2. 1本のポリラインを生成 (左上から時計回り)
-    //    (1pxのオフセットを考慮)
     const p = { x1: 1, y1: 1, x2: w - 1, y2: h - 1 };
-    // w=0, h=0 のコンテナ（非表示要素など）の場合、座標がマイナスになるのを防ぐ
     if (p.x2 < p.x1) p.x2 = p.x1;
     if (p.y2 < p.y1) p.y2 = p.y1;
 
@@ -68,7 +70,6 @@ async function drawBorderSVG(container) {
     polyline.dataset.length = length;
     polyline.style.strokeDasharray = length;
     polyline.style.strokeDashoffset = length; // 初期状態（描画前）
-    polyline.style.fill = "none"; // Polylineはfillの無効化が必須
 
     // 3. 描画フェーズ1: 薄い線 (#550, 1px)
     polyline.style.stroke = "#550";
@@ -80,7 +81,7 @@ async function drawBorderSVG(container) {
 
     // 4. アニメーション実行
     const duration = length / LINE_DRAW_SPEED;
-    await animateStroke(polyline, duration); // animateLine -> animateStroke
+    await animateStroke(polyline, duration);
     
     // 5. 描画フェーズ2: 濃い線 (#FF0, 2px)
     polyline.style.stroke = "#FF0";
@@ -96,7 +97,7 @@ async function drawBorderSVG(container) {
 function drawBorderSVGStatic(container) {
     const w = container.offsetWidth;
     const h = container.offsetHeight;
-    if (w <= 2 || h <= 2) return; // 小さすぎる要素は描画しない
+    if (w <= 2 || h <= 2) return; 
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "dynamic-svg-border");
@@ -108,9 +109,7 @@ function drawBorderSVGStatic(container) {
     const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
     polyline.setAttribute("points", points);
     polyline.style.strokeDashoffset = 0; // アニメーション完了状態
-    polyline.style.fill = "none";
     
-    // 描画フェーズ2（濃い線）のスタイルを直接適用
     polyline.style.stroke = "#FF0";
     polyline.style.strokeWidth = "2px";
     
@@ -120,7 +119,7 @@ function drawBorderSVGStatic(container) {
 }
 
 /**
- * 要素（テキストやブロック）を「光らせて」描画する
+ * 要素（テキストやブロック）を「枠線→塗りつぶし」で描画する
  * @param {HTMLElement} el - 対象の要素
  */
 async function drawElement(el) {
@@ -133,13 +132,13 @@ async function drawElement(el) {
     const preClass = `${type}-pre`;
     const postClass = `${type}-post`;
     
-    // 1. ぼんやり光る（pre）= 枠線
+    // 1. 枠線で表示 (pre)
     el.classList.add('drawing-element-pre', preClass);
     
     const waitTime = type === 'comment' ? (PRE_DRAW_TIME / 2) : PRE_DRAW_TIME;
     await sleep(waitTime);
     
-    // 2. くっきり表示（post）= 塗りつぶし
+    // 2. 塗りつぶしで表示 (post)
     el.classList.remove('drawing-element-pre', preClass);
     el.classList.add('drawing-element-post', postClass);
     
@@ -147,26 +146,29 @@ async function drawElement(el) {
 }
 
 /**
- * メインの描画エンジン
+ * ★ 修正点: メインの描画エンジン (再帰処理に変更)
+ * 指定された要素の「直下の子」を順番に描画する
+ * @param {HTMLElement} rootElement - 描画を開始する親要素
  */
-async function drawEngine() {
-    // 1. ページ全体のコンテナを描画
-    const terminal = document.getElementById('terminal-screen');
-    await drawBorderSVG(terminal);
+async function drawEngine(rootElement) {
+    // 1. rootElement の「直下の子」のうち、[data-draw]属性を持つものだけを取得
+    // ※ querySelectorAll は静的なリストを返す
+    const children = rootElement.querySelectorAll(':scope > [data-draw]');
 
-    // 2. ページ内の主要コンテナを順番に取得して描画
-    const mainContainers = document.querySelectorAll(
-        '#terminal-screen > .draw-container[data-draw="container"]'
-    );
+    for (const child of children) {
+        const drawType = child.dataset.draw;
 
-    for (const container of mainContainers) {
-        // 2a. コンテナの枠線を描画
-        await drawBorderSVG(container);
-        
-        // 2b. コンテナ内の要素（テキストなど）を描画
-        const elements = container.querySelectorAll('[data-draw="element"]');
-        for (const el of elements) {
-            await drawElement(el);
+        if (drawType === 'container') {
+            // 2a. 子がコンテナの場合:
+            // 1. 枠線を描画
+            await drawBorderSVG(child);
+            // 2. コンテナの中身を再帰的に描画
+            await drawEngine(child);
+            
+        } else if (drawType === 'element') {
+            // 2b. 子が要素の場合:
+            // 1. 要素を描画 (枠線 -> 塗りつぶし)
+            await drawElement(child);
         }
     }
 }
@@ -197,25 +199,27 @@ function initializeComments() {
             li.appendChild(nameStrong);
             li.appendChild(commentText);
             
-            li.dataset.draw = "element"; // テキスト描画対象
-            li.dataset.drawType = "comment"; // コメント用スタイル
+            li.dataset.draw = "element"; 
+            li.dataset.drawType = "comment"; 
             
             commentList.appendChild(li);
             commentElements.push(li);
         });
 
-        // 順番にアニメーション
-        for (const li of commentElements) {
-            if (animate) {
-                // 1. 枠線を描画 (SVG)
+        // Promise.allで並列（同時）実行
+        if (animate) {
+            const drawTasks = commentElements.map(async (li) => {
+                // li は コンテナ扱い (枠線 -> 中身) ではなく、
+                // 枠線とテキストを同時に描画する
                 await drawBorderSVG(li);
-                // 2. テキストを描画 (Glow)
                 await drawElement(li);
-            } else {
-                // アニメーション無しの場合は、静的ボーダー（SVG）とテキストを即時表示
+            });
+            await Promise.all(drawTasks);
+        } else {
+            // アニメーション無しの場合は即時表示
+            for (const li of commentElements) {
                 li.style.opacity = '1';
-                // li.style.border = '2px solid #FF0'; // <-- ★静的borderを削除
-                drawBorderSVGStatic(li); // <-- ★静的SVG描画関数を呼ぶ
+                drawBorderSVGStatic(li); 
                 li.classList.add('drawing-element-post', 'comment-post');
             }
         }
@@ -270,11 +274,20 @@ function initializeComments() {
 
 
 /* ===== ページ読み込み時のメイン処理 ===== */
+// ★ 修正点: 呼び出し方を変更
 document.addEventListener("DOMContentLoaded", async () => {
     
-    // 1. メインの描画エンジン（SVGボーダー＋テキスト）を開始
-    await drawEngine();
+    // 1. ページ全体のコンテナを取得
+    const terminal = document.getElementById('terminal-screen');
     
-    // 2. メイン描画完了後、コメント機能の初期化と読み込みを開始
+    // 2. まず全体の枠線を描画
+    await drawBorderSVG(terminal);
+    
+    // 3. メイン描画エンジン（再帰）を開始
+    // (terminal の「中身」を描画していく)
+    await drawEngine(terminal);
+    
+    // 4. メイン描画完了後、コメント機能の初期化と読み込みを開始
+    // (この時点でコメントリストが描画されます)
     initializeComments();
 });
