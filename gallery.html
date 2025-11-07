@@ -1,59 +1,55 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Gallery | SGWR</title>
-
-    <!-- lightGallery - bundle CSS（コア＋プラグインのCSSを含む） -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/css/lightgallery-bundle.min.css">
-
-    <!-- カスタム CSS -->
-    <link rel="stylesheet" href="gallery.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SGWR Portfolio</title>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-    <header class="site-header">
-        <nav class="navbar">
-            <div class="logo">SGWR</div>
-            <ul class="nav-links">
-                <li><a href="index.html">Home</a></li>
-                <li><a href="gallery.html">Gallery</a></li>
-                <li><a href="article.html">Articles</a></li>
-                <li><a href="about.html">About</a></li>
-            </ul>
+    <div id="terminal-screen" class="draw-container">
+
+        <nav class="draw-container" data-draw="container">
+            <div class="nav-left" data-draw="element" data-draw-type="block-red">SGWR Portfolio</div>
+            <div class="nav-links">
+                <a href="index.html" data-draw="element" data-draw-type="text-yellow">Home</a>
+                <a href="gallery.html" data-draw="element" data-draw-type="text-yellow">Gallery</a>
+            </div>
         </nav>
 
-    </header>
-
-    <section class="controls-wrapper">
-        <div class="controls">
-            <button class="control-btn" data-sort="asc">▲ 昇順</button>
-            <button class="control-btn" data-sort="desc">▼ 降順</button>
-
-            <div class="filters" aria-hidden="false">
-                <button class="filter-btn active" data-filter="all">All</button>
-                <button class="filter-btn" data-filter="portrait">Portrait</button>
-                <button class="filter-btn" data-filter="street">Street</button>
-                <button class="filter-btn" data-filter="nature">Nature</button>
+        <header class="hero-section draw-container" data-draw="container">
+            <div class="hero-overlay">
+                <h1 class="hero-title" data-draw="element" data-draw-type="text-white">without film <br>still film</h1>
             </div>
-        </div>
-    </section>
+        </header>
 
-    <!-- ギャラリー本体（JS が中身を作る） -->
-    <main id="gallery" class="gallery" aria-live="polite"></main>
+        <main class="comment-section draw-container" data-draw="container">
+            <h2 data-draw="element" data-draw-type="text-white">Comments</h2>
+            
+            <form id="comment-form" class="draw-container" data-draw="container">
+                <input type="text" name="name" placeholder="お名前" required
+                       data-draw="element" data-draw-type="form-input" />
+                
+                <textarea name="comment" placeholder="コメントを入力..." required
+                       data-draw="element" data-draw-type="form-input"></textarea>
+                
+                <button type="submit"
+                       data-draw="element" data-draw-type="form-button">送信</button>
+            </form>
 
-    <!-- EXIF.js -->
-    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+            <ul id="comment-list">
+                </ul>
+        </main>
 
-    <!-- lightGallery UMD（コア + プラグインUMD） -->
-    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/lightgallery.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/plugins/zoom/lg-zoom.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.2/plugins/thumbnail/lg-thumbnail.umd.min.js"></script>
+        <footer class="draw-container" data-draw="container">
+            <p data-draw="element" data-draw-type="text-gray">© 2025 SGWR Portfolio</p>
+        </footer>
 
-    <!-- カスタム JS -->
-    <script src="gallery.js"></script>
+    </div> 
+    <script src="script.js"></script>
 </body>
 
 </html>

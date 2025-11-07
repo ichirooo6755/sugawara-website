@@ -18,6 +18,7 @@ body {
     width: 100%;
     min-height: calc(100vh - 20px);
     padding: 10px;
+    /* ★ 修正: !important を削除 */
     visibility: hidden; 
     opacity: 0;
 }
@@ -27,6 +28,7 @@ body {
     position: relative; 
     margin-bottom: 10px;
     padding: 10px;
+    /* ★ 修正: !important を削除 */
     visibility: hidden;
     opacity: 0; 
 }
@@ -51,6 +53,7 @@ body {
 
 /* アニメーション対象の要素 */
 .draw-element {
+    /* ★ 修正: !important を削除 */
     visibility: hidden;
     opacity: 0; 
     position: relative;
@@ -78,6 +81,7 @@ nav {
     text-decoration: none;
     margin: 0 5px;
     display: inline-block; 
+    /* ★ 修正: !important を削除 */
     visibility: hidden;
     opacity: 0;
 }
@@ -115,13 +119,11 @@ nav {
 #comment-list li {
     background: #000; 
     color: #FFF; 
-    /* ★ 修正点: margin-bottom をさらに増やし、重なりを避ける */
-    margin-bottom: 25px; /* またはそれ以上 */
+    margin-bottom: 30px; /* 重なり解消 */
     padding: 10px; 
-    position: relative; /* 子要素のSVGが<li>の範囲内で絶対配置されるように */
+    position: relative; 
     opacity: 0;
     
-    /* border は JS で drawing-element-pre/post クラスで制御 */
     border: 2px solid transparent; 
     transition: border-color 0.1s; 
 }
@@ -130,7 +132,7 @@ nav {
 footer { text-align: center; padding: 10px; }
 
 /* =======================================
-   アニメーション用スタイル (枠線 -> 塗りつぶし)
+   アニメーション用スタイル
    ======================================= */
 
 /* --- 共通 --- */
@@ -146,67 +148,56 @@ footer { text-align: center; padding: 10px; }
 }
 
 /* --- タイプ: block-red (SGWR Portfolio のみ) --- */
-.block-red-pre { 
-    text-shadow: 1px 0 0 #F00, -1px 0 0 #F00, 0 1px 0 #F00, 0 -1px 0 #F00; 
-}
+.block-red-pre { }
 .block-red-post { 
     background-color: #F00; 
     color: #FFF; 
 }
 
 /* --- テキスト要素 (1文字ずつ表示) --- */
-/* pre 状態では、text-shadow は薄い色で描画されるが、文字は透明 */
-.text-white-pre { text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555; }
+.text-white-pre { }
 .text-white-post { color: #FFF; }
-.text-yellow-pre { text-shadow: 1px 0 0 #550, -1px 0 0 #550, 0 1px 0 #550, 0 -1px 0 #550; }
+.text-yellow-pre { }
 .text-yellow-post { color: #FF0; }
-.text-gray-pre { text-shadow: 1px 0 0 #444, -1px 0 0 #444, 0 1px 0 #444, 0 -1px 0 #444; }
+.text-gray-pre { }
 .text-gray-post { color: #888; }
 
-/* ★ 修正点: コメント要素の pre/post で border-color をアニメーションさせる */
+/* コメント要素 (枠線アニメーション + 1文字ずつ表示) */
 .comment-pre { 
-    text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555; 
     color: transparent; 
     border-color: #550; /* 枠線表示時の色 */
 }
 .comment-pre strong { 
     color: transparent; 
-    text-shadow: 1px 0 0 #550, -1px 0 0 #550, 0 1px 0 #550, 0 -1px 0 #550; 
 }
 .comment-post { 
     color: #FFF; 
-    text-shadow: none; 
     border-color: #FF0; /* 塗りつぶし完了時の色 */
 }
 .comment-post strong { 
     color: #FF0; 
-    text-shadow: none; 
 }
 
-/* フォーム入力欄 */
+/* フォーム入力欄 (枠線アニメーション) */
 .form-input-pre {
     border-color: #550; 
-    text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555; 
     color: transparent; 
     background: #000;
 }
 .form-input-post {
     border-color: #FF0; 
-    text-shadow: none; 
     color: #FFF; 
     background: #000;
 }
 
-/* フォームボタン */
+/* フォームボタン (枠線アニメーション) */
 .form-button-pre {
     border-color: #550; 
-    text-shadow: 1px 0 0 #550, -1px 0 0 #550, 0 1px 0 #550, 0 -1px 0 #550; 
     color: transparent; 
     background: #000;
 }
 .form-button-post {
     border-color: #FF0; 
-    text-shadow: none; 
     color: #000; 
     background: #FF0;
 }

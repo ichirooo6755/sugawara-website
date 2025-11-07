@@ -1,9 +1,9 @@
 /* ===== 描画エンジン (SVG/rAF) ===== */
 
-const PRE_DRAW_TIME = 400; 
-const POST_DRAW_TIME = 100; 
-const LINE_DRAW_SPEED = 2.5; 
-const TEXT_DRAW_SPEED = 50; 
+const PRE_DRAW_TIME = 400; // フォームの枠線アニメーション時間 (ms)
+const POST_DRAW_TIME = 100; // 次の要素までの待機時間 (ms)
+const LINE_DRAW_SPEED = 2.5; // 線の描画速度 (px/ms)
+const TEXT_DRAW_SPEED = 50; // 1文字あたりの描画速度 (ms)
 
 /**
  * 処理を一時停止するヘルパー関数
@@ -113,8 +113,7 @@ function drawBorderSVGStatic(container) {
 }
 
 /**
- * 要素（テキストやブロック）を「枠線→塗りつぶし」で描画する (1文字ずつ表示にも対応)
- * @param {HTMLElement} el - 対象の要素
+ * ★ 修正: 全テキスト要素を「1文字ずつ表示」に変更
  */
 async function drawElement(el) {
     const type = el.dataset.drawType;
@@ -127,9 +126,10 @@ async function drawElement(el) {
     const preClass = `${type}-pre`;
     const postClass = `${type}-post`;
 
-    const isTypingText = type.startsWith('text-') || type === 'comment';
-    const isFullAnim = type === 'block-red' || type.startsWith('form-');
-
+    // 1文字ずつ表示するタイプか (全てのテキスト)
+    const isTypingText = type.startsWith('text-') || type === 'comment' || type === 'block-red';
+    // 枠線アニメーションのみのタイプか (フォーム)
+    const isFormAnim = type.startsWith('form-');
 
     let originalText = '';
     let isAnchor = el.tagName === 'A';
@@ -139,7 +139,7 @@ async function drawElement(el) {
     el.style.visibility = 'visible';
     el.style.opacity = '1'; 
     
-    // 2. 1文字ずつ表示が必要な要素の処理 (text-*, comment, block-red)
+    // 2. 1文字ずつ表示 (isTypingText が true の場合)
     if (isTypingText) { 
         
         originalText = el.innerHTML;
@@ -167,6 +167,7 @@ async function drawElement(el) {
         
         el.innerHTML = ''; 
         
+        // 1文字ずつ表示アニメーション実行
         for (let i = 0; i < totalChars; i++) {
             currentTotalCharsDisplayed++;
             let tempContent = '';
@@ -195,19 +196,15 @@ async function drawElement(el) {
             }
         }
     
-        // 1文字ずつ表示完了後の待機 (block-red, form-* の場合は枠線→塗りつぶしアニメーション前の待機)
-        if (isFullAnim) {
-            await sleep(PRE_DRAW_TIME); 
-        } else {
-            await sleep(100); // 通常のテキストは短めの待機
-        }
+        // 1文字ずつ表示完了後の待機
+        await sleep(100); 
 
-    } else if (isFullAnim) {
-        // フォーム要素 (form-input, form-button) は、テキストアニメーションなしで枠線→塗りつぶしアニメーションのみ
+    } else if (isFormAnim) {
+        // 3. フォーム要素の枠線アニメーション
         await sleep(PRE_DRAW_TIME); 
     }
     
-    // 3. 塗りつぶしへ移行 (post)
+    // 4. 塗りつぶしへ移行 (post)
     el.classList.remove('drawing-element-pre', preClass);
     el.classList.add('drawing-element-post', postClass);
     
