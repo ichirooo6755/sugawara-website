@@ -1,16 +1,18 @@
 /* ===== 描画エンジン (SVG/rAF) ===== */
 
-const PRE_DRAW_TIME = 400; // block-red のみが光る時間 (ms)
-const POST_DRAW_TIME = 100; // 次の要素までの待機時間 (ms)
-const LINE_DRAW_SPEED = 2.5; // 線の描画速度 (px/ms)
-const TEXT_DRAW_SPEED = 50; // 1文字あたりの描画速度 (ms)
+const PRE_DRAW_TIME = 400; 
+const POST_DRAW_TIME = 100; 
+const LINE_DRAW_SPEED = 2.5; 
+const TEXT_DRAW_SPEED = 50; 
 
 /**
  * 処理を一時停止するヘルパー関数
  */
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// ... (animateStroke, drawBorderSVG, drawBorderSVGStatic の関数は変更なし) ...
+/**
+ * 1本のSVGストローク(line/polyline)を requestAnimationFrame で描画する
+ */
 function animateStroke(el, duration) {
     return new Promise(resolve => {
         const length = parseFloat(el.dataset.length);
@@ -36,6 +38,9 @@ function animateStroke(el, duration) {
 }
 
 
+/**
+ * コンテナにSVGボーダーを生成し、アニメーション描画する (Polyline版)
+ */
 async function drawBorderSVG(container) {
     const w = container.offsetWidth;
     const h = container.offsetHeight;
@@ -79,6 +84,9 @@ async function drawBorderSVG(container) {
     await sleep(POST_DRAW_TIME);
 }
 
+/**
+ * コンテナにSVGボーダーを静的に（アニメーションなしで）生成する
+ */
 function drawBorderSVGStatic(container) {
     const w = container.offsetWidth;
     const h = container.offsetHeight;
@@ -131,18 +139,15 @@ async function drawElement(el) {
     el.style.visibility = 'visible';
     el.style.opacity = '1'; 
     
-    // 2. 1文字ずつ表示が必要な要素の処理
-    if (isTypingText && !type.startsWith('form-')) { 
+    // 2. 1文字ずつ表示が必要な要素の処理 (text-*, comment, block-red)
+    if (isTypingText) { 
         
-        // 元のHTMLを保持
         originalText = el.innerHTML;
         
-        // テキストノードと特殊タグを配列に格納
         const nodeContents = [];
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = originalText;
         
-        // <a>タグの場合は全体を一つのテキストノードとして扱う
         if (isAnchor) {
             nodeContents.push({ type: 'text', content: el.textContent.trim() });
         } else {
@@ -157,13 +162,11 @@ async function drawElement(el) {
             });
         }
         
-        // 描画用の文字数をカウント（<br>などは数に含めない）
         const totalChars = nodeContents.reduce((sum, node) => sum + (node.type !== 'br' ? node.content.length : 0), 0);
         let currentTotalCharsDisplayed = 0;
         
-        el.innerHTML = ''; // 一旦中身を空にする
+        el.innerHTML = ''; 
         
-        // 1文字ずつ表示を実行
         for (let i = 0; i < totalChars; i++) {
             currentTotalCharsDisplayed++;
             let tempContent = '';
@@ -171,10 +174,9 @@ async function drawElement(el) {
 
             for (const tNode of nodeContents) {
                 if (tNode.type === 'br') {
-                     tempContent += tNode.content; // <br>は即時表示
+                     tempContent += tNode.content; 
                      continue;
                 }
-                // 現在表示すべき文字数
                 const charsToDisplay = Math.min(tNode.content.length, currentTotalCharsDisplayed - charsProcessed);
                 if (charsToDisplay > 0) {
                     const partialContent = tNode.content.substring(0, charsToDisplay);
@@ -188,16 +190,20 @@ async function drawElement(el) {
             }
             el.innerHTML = tempContent;
             
-            if (i < totalChars - 1) { // 最後の文字以外で待機
+            if (i < totalChars - 1) { 
                  await sleep(TEXT_DRAW_SPEED);
             }
         }
     
-        // 1文字ずつ表示完了後の待機 (block-red の場合は枠線→塗りつぶしアニメーション前の待機)
-        await sleep(isFullAnim ? PRE_DRAW_TIME : 100); 
+        // 1文字ずつ表示完了後の待機 (block-red, form-* の場合は枠線→塗りつぶしアニメーション前の待機)
+        if (isFullAnim) {
+            await sleep(PRE_DRAW_TIME); 
+        } else {
+            await sleep(100); // 通常のテキストは短めの待機
+        }
 
     } else if (isFullAnim) {
-        // フォーム要素 (form-input, form-button) は、枠線→塗りつぶしアニメーションのみ
+        // フォーム要素 (form-input, form-button) は、テキストアニメーションなしで枠線→塗りつぶしアニメーションのみ
         await sleep(PRE_DRAW_TIME); 
     }
     
@@ -206,7 +212,7 @@ async function drawElement(el) {
     el.classList.add('drawing-element-post', postClass);
     
     // テキストタイプの場合、元の内容を完全表示に戻す
-    if (isTypingText && !type.startsWith('form-')) {
+    if (isTypingText) {
         el.innerHTML = originalText; 
     }
     
@@ -215,7 +221,7 @@ async function drawElement(el) {
 
 
 /**
- * メインの描画エンジン (再帰処理に変更)
+ * メインの描画エンジン (再帰処理)
  */
 async function drawEngine(rootElement) {
     const children = rootElement.querySelectorAll(':scope > [data-draw]');
@@ -234,7 +240,7 @@ async function drawEngine(rootElement) {
 }
 
 
-/* ===== コメント機能 & ページ読み込み時のメイン処理 (変更なし) ===== */
+/* ===== コメント機能 ===== */
 
 function initializeComments() {
     const form = document.getElementById("comment-form");
@@ -272,7 +278,6 @@ function initializeComments() {
 
     async function fetchComments(animateOnLoad = false) {
         try {
-            // Netlify Functions からコメントを取得
             const res = await fetch("/.netlify/functions/getComments");
             if (!res.ok) throw new Error("関数呼び出しエラー");
             const comments = await res.json();
@@ -280,7 +285,6 @@ function initializeComments() {
             localStorage.setItem("comments", JSON.stringify(comments));
         } catch (e) {
             console.warn("Netlify関数失敗。ローカルコメントを使用:", e.message);
-            // 失敗時はローカルストレージから取得
             const local = JSON.parse(localStorage.getItem("comments") || "[]");
             await renderComments(local, animateOnLoad);
         }
@@ -295,7 +299,6 @@ function initializeComments() {
         const newComment = { name, comment };
 
         try {
-            // Netlify Functions でコメントを送信
             const res = await fetch("/.netlify/functions/addComment", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -306,7 +309,6 @@ function initializeComments() {
             await fetchComments(true); 
         } catch (e) {
             console.warn("Netlify関数エラー。ローカル保存:", e.message);
-            // 失敗時はローカルストレージに追加
             const local = JSON.parse(localStorage.getItem("comments") || "[]");
             local.push(newComment);
             localStorage.setItem("comments", JSON.stringify(local));

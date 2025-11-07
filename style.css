@@ -3,7 +3,6 @@ body {
     color: #FFF;
     margin: 0;
     padding: 10px;
-    /* DotGothic16 が読み込まれない場合は MS Gothic などに変更してください */
     font-family: "DotGothic16", "MS Gothic", sans-serif; 
     overflow-y: scroll;
 }
@@ -15,11 +14,10 @@ body {
 
 /* ========== 端末画面コンテナ ========== */
 #terminal-screen {
-    position: relative; /* SVGの基点 */
+    position: relative;
     width: 100%;
     min-height: calc(100vh - 20px);
     padding: 10px;
-    /* ★ チラ見え防止: 完全に非表示にしてJSの制御を待つ */
     visibility: hidden; 
     opacity: 0;
 }
@@ -29,7 +27,6 @@ body {
     position: relative; 
     margin-bottom: 10px;
     padding: 10px;
-    /* ★ チラ見え防止: 完全に非表示にしてJSの制御を待つ */
     visibility: hidden;
     opacity: 0; 
 }
@@ -54,7 +51,6 @@ body {
 
 /* アニメーション対象の要素 */
 .draw-element {
-    /* ★ チラ見え防止: 完全に非表示にしてJSの制御を待つ */
     visibility: hidden;
     opacity: 0; 
     position: relative;
@@ -81,7 +77,6 @@ nav {
     color: #FF0;
     text-decoration: none;
     margin: 0 5px;
-    /* ★ 修正: <a>タグもアニメーション対象として非表示にする */
     display: inline-block; 
     visibility: hidden;
     opacity: 0;
@@ -98,19 +93,18 @@ nav {
 
 #comment-form { display: flex; flex-direction: column; gap: 10px; }
 
-/* フォーム要素の基本スタイル */
 #comment-form input,
 #comment-form textarea {
     background: #000; 
-    color: transparent; /* 初期は文字を透明に */
-    border: 2px solid transparent; /* 初期は枠線も透明 */
+    color: transparent; 
+    border: 2px solid transparent; 
     padding: 10px; font-size: 1em; font-family: inherit; z-index: 2;
 }
 
 #comment-form button {
-    background-color: #000; /* 初期は背景も黒 */
-    color: transparent; /* 初期は文字を透明に */
-    border: 2px solid transparent; /* 初期は枠線も透明 */
+    background-color: #000; 
+    color: transparent; 
+    border: 2px solid transparent; 
     font-weight: bold; padding: 10px; cursor: pointer;
     font-family: inherit; font-size: 1em; z-index: 2;
 }
@@ -121,12 +115,13 @@ nav {
 #comment-list li {
     background: #000; 
     color: #FFF; 
-    /* ★ 修正点: マージンを増やし、他の枠線と重ならないようにする */
-    margin-bottom: 20px; 
+    /* ★ 修正点: margin-bottom をさらに増やし、重なりを避ける */
+    margin-bottom: 25px; /* またはそれ以上 */
     padding: 10px; 
-    position: relative; 
+    position: relative; /* 子要素のSVGが<li>の範囲内で絶対配置されるように */
     opacity: 0;
     
+    /* border は JS で drawing-element-pre/post クラスで制御 */
     border: 2px solid transparent; 
     transition: border-color 0.1s; 
 }
@@ -141,28 +136,26 @@ footer { text-align: center; padding: 10px; }
 /* --- 共通 --- */
 .drawing-element-pre {
     visibility: visible;
-    opacity: 1; /* 要素全体を表示 */
-    color: transparent; /* テキストの中身は透明 */
+    opacity: 1; 
+    color: transparent; 
 }
 .drawing-element-post {
     visibility: visible;
     opacity: 1;
-    text-shadow: none; /* テキストの枠線は消す */
+    text-shadow: none; 
 }
 
 /* --- タイプ: block-red (SGWR Portfolio のみ) --- */
 .block-red-pre { 
-    /* 枠線状態: 赤く光る */
     text-shadow: 1px 0 0 #F00, -1px 0 0 #F00, 0 1px 0 #F00, 0 -1px 0 #F00; 
 }
 .block-red-post { 
-    /* 塗りつぶし状態: 背景赤、文字白 */
     background-color: #F00; 
     color: #FFF; 
 }
 
 /* --- テキスト要素 (1文字ずつ表示) --- */
-/* 1文字ずつ表示時は text-shadow は不要だが、要素自体は pre/post クラスを使う */
+/* pre 状態では、text-shadow は薄い色で描画されるが、文字は透明 */
 .text-white-pre { text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555; }
 .text-white-post { color: #FFF; }
 .text-yellow-pre { text-shadow: 1px 0 0 #550, -1px 0 0 #550, 0 1px 0 #550, 0 -1px 0 #550; }
@@ -170,11 +163,11 @@ footer { text-align: center; padding: 10px; }
 .text-gray-pre { text-shadow: 1px 0 0 #444, -1px 0 0 #444, 0 1px 0 #444, 0 -1px 0 #444; }
 .text-gray-post { color: #888; }
 
-/* コメント要素 */
+/* ★ 修正点: コメント要素の pre/post で border-color をアニメーションさせる */
 .comment-pre { 
     text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555; 
     color: transparent; 
-    border-color: #550; 
+    border-color: #550; /* 枠線表示時の色 */
 }
 .comment-pre strong { 
     color: transparent; 
@@ -183,7 +176,7 @@ footer { text-align: center; padding: 10px; }
 .comment-post { 
     color: #FFF; 
     text-shadow: none; 
-    border-color: #FF0; 
+    border-color: #FF0; /* 塗りつぶし完了時の色 */
 }
 .comment-post strong { 
     color: #FF0; 
