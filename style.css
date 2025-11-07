@@ -1,10 +1,10 @@
-/* ========== 全体の基本設定 (NAPLPS風) ========== */
 body {
     background-color: #000;
     color: #FFF;
     margin: 0;
     padding: 10px;
-    font-family: "DotGothic16", "MS Gothic", sans-serif;
+    /* DotGothic16 が読み込まれない場合は MS Gothic などに変更してください */
+    font-family: "DotGothic16", "MS Gothic", sans-serif; 
     overflow-y: scroll;
 }
 
@@ -19,15 +19,19 @@ body {
     width: 100%;
     min-height: calc(100vh - 20px);
     padding: 10px;
+    /* ★ チラ見え防止: 完全に非表示にしてJSの制御を待つ */
+    visibility: hidden; 
     opacity: 0;
 }
 
 /* ========== 共通コンテナ（枠線） ========== */
 .draw-container {
-    position: relative; /* SVGの基点 */
+    position: relative; 
     margin-bottom: 10px;
     padding: 10px;
-    opacity: 0; /* JSが描画時に表示 */
+    /* ★ チラ見え防止: 完全に非表示にしてJSの制御を待つ */
+    visibility: hidden;
+    opacity: 0; 
 }
 
 /* ========== 動的SVG（枠線） ========== */
@@ -50,15 +54,15 @@ body {
 
 /* アニメーション対象の要素 */
 .draw-element {
-    /* アニメーション開始前は要素全体を非表示 */
+    /* ★ チラ見え防止: 完全に非表示にしてJSの制御を待つ */
+    visibility: hidden;
     opacity: 0; 
     position: relative;
     z-index: 2;
-    /* text-shadow と color, background-color, border-color の切り替えを高速化 */
     transition: color 0.1s, text-shadow 0.1s, background-color 0.1s, border-color 0.1s;
 }
 
-/* ========== ナビゲーションバー (略) ========== */
+/* ========== ナビゲーションバー ========== */
 nav {
     display: flex;
     justify-content: space-between;
@@ -77,9 +81,13 @@ nav {
     color: #FF0;
     text-decoration: none;
     margin: 0 5px;
+    /* ★ 修正: <a>タグもアニメーション対象として非表示にする */
+    display: inline-block; 
+    visibility: hidden;
+    opacity: 0;
 }
 
-/* ========== Hero Section（タイトル） (略) ========== */
+/* ========== Hero Section（タイトル） ========== */
 .hero-section { background: #000; display: block; }
 .hero-overlay { background: none; padding: 0; text-align: left; }
 .hero-title { font-size: 2.5em; margin: 0; line-height: 1.3; }
@@ -90,8 +98,7 @@ nav {
 
 #comment-form { display: flex; flex-direction: column; gap: 10px; }
 
-/* フォーム要素の基本スタイル:
-   アニメーション前でも正しい高さを確保し、背景は透明か黒 */
+/* フォーム要素の基本スタイル */
 #comment-form input,
 #comment-form textarea {
     background: #000; 
@@ -112,8 +119,16 @@ nav {
 
 #comment-list { list-style: none; padding: 0; margin-top: 10px; }
 #comment-list li {
-    background: #000; color: #FFF; margin-bottom: 10px;
-    padding: 10px; position: relative; opacity: 0;
+    background: #000; 
+    color: #FFF; 
+    /* ★ 修正点: マージンを増やし、他の枠線と重ならないようにする */
+    margin-bottom: 20px; 
+    padding: 10px; 
+    position: relative; 
+    opacity: 0;
+    
+    border: 2px solid transparent; 
+    transition: border-color 0.1s; 
 }
 #comment-list li strong { color: #FF0; }
 
@@ -125,53 +140,80 @@ footer { text-align: center; padding: 10px; }
 
 /* --- 共通 --- */
 .drawing-element-pre {
+    visibility: visible;
     opacity: 1; /* 要素全体を表示 */
     color: transparent; /* テキストの中身は透明 */
-    /* text-shadow は各タイプで指定 */
 }
 .drawing-element-post {
+    visibility: visible;
     opacity: 1;
     text-shadow: none; /* テキストの枠線は消す */
 }
 
-/* --- (その他の text-xxx, block-xxx スタイルは略) --- */
-.block-red-pre { text-shadow: 1px 0 0 #F00, -1px 0 0 #F00, 0 1px 0 #F00, 0 -1px 0 #F00; }
-.block-red-post { background-color: #F00; color: #FFF; }
+/* --- タイプ: block-red (SGWR Portfolio のみ) --- */
+.block-red-pre { 
+    /* 枠線状態: 赤く光る */
+    text-shadow: 1px 0 0 #F00, -1px 0 0 #F00, 0 1px 0 #F00, 0 -1px 0 #F00; 
+}
+.block-red-post { 
+    /* 塗りつぶし状態: 背景赤、文字白 */
+    background-color: #F00; 
+    color: #FFF; 
+}
+
+/* --- テキスト要素 (1文字ずつ表示) --- */
+/* 1文字ずつ表示時は text-shadow は不要だが、要素自体は pre/post クラスを使う */
 .text-white-pre { text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555; }
 .text-white-post { color: #FFF; }
 .text-yellow-pre { text-shadow: 1px 0 0 #550, -1px 0 0 #550, 0 1px 0 #550, 0 -1px 0 #550; }
 .text-yellow-post { color: #FF0; }
 .text-gray-pre { text-shadow: 1px 0 0 #444, -1px 0 0 #444, 0 1px 0 #444, 0 -1px 0 #444; }
 .text-gray-post { color: #888; }
-.comment-pre { text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555; color: transparent; }
-.comment-pre strong { color: transparent; text-shadow: 1px 0 0 #550, -1px 0 0 #550, 0 1px 0 #550, 0 -1px 0 #550; }
-.comment-post { color: #FFF; text-shadow: none; }
-.comment-post strong { color: #FF0; text-shadow: none; }
 
-/* ★ 修正点: フォーム入力欄のアニメーションスタイル (text-shadow ベース) ★ */
+/* コメント要素 */
+.comment-pre { 
+    text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555; 
+    color: transparent; 
+    border-color: #550; 
+}
+.comment-pre strong { 
+    color: transparent; 
+    text-shadow: 1px 0 0 #550, -1px 0 0 #550, 0 1px 0 #550, 0 -1px 0 #550; 
+}
+.comment-post { 
+    color: #FFF; 
+    text-shadow: none; 
+    border-color: #FF0; 
+}
+.comment-post strong { 
+    color: #FF0; 
+    text-shadow: none; 
+}
+
+/* フォーム入力欄 */
 .form-input-pre {
-    border-color: #550; /* 薄い黄色の枠線 */
-    text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555; /* テキストの枠線 */
-    color: transparent; /* テキスト中身は透明 */
+    border-color: #550; 
+    text-shadow: 1px 0 0 #555, -1px 0 0 #555, 0 1px 0 #555, 0 -1px 0 #555; 
+    color: transparent; 
     background: #000;
 }
 .form-input-post {
-    border-color: #FF0; /* 濃い黄色の枠線 */
-    text-shadow: none; /* テキストの枠線は消す */
-    color: #FFF; /* テキスト中身は白 */
+    border-color: #FF0; 
+    text-shadow: none; 
+    color: #FFF; 
     background: #000;
 }
 
-/* ★ 修正点: フォームボタンのアニメーションスタイル (text-shadow ベース) ★ */
+/* フォームボタン */
 .form-button-pre {
-    border-color: #550; /* 薄い黄色の枠線 */
-    text-shadow: 1px 0 0 #550, -1px 0 0 #550, 0 1px 0 #550, 0 -1px 0 #550; /* テキストの枠線 */
-    color: transparent; /* テキスト中身は透明 */
+    border-color: #550; 
+    text-shadow: 1px 0 0 #550, -1px 0 0 #550, 0 1px 0 #550, 0 -1px 0 #550; 
+    color: transparent; 
     background: #000;
 }
 .form-button-post {
-    border-color: #FF0; /* 濃い黄色の枠線 */
-    text-shadow: none; /* テキストの枠線は消す */
-    color: #000; /* テキスト中身は黒 */
+    border-color: #FF0; 
+    text-shadow: none; 
+    color: #000; 
     background: #FF0;
 }
