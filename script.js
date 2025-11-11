@@ -219,7 +219,6 @@ async function drawElement(el) {
     await sleep(POST_DRAW_TIME / 2);
 }
 
-
 /**
  * メインの描画エンジン (再帰処理)
  */
@@ -242,11 +241,12 @@ async function drawEngine(rootElement) {
             // コメントリストの描画をここで待機
             await initializeComments(child);
 
-            // ★★★ 修正箇所: コメント描画完了後、親コンテナの枠線SVGを正しい高さで再描画 ★★★
+            // ★★★ 修正箇所: 親コンテナの枠線SVGを正しい高さで再描画 ★★★
             const containerParent = child.closest('[data-draw="container"]');
             if (containerParent) {
-                // 既存のSVGを削除（フッターとの重なり防止と、高さの再取得のため）
-                containerParent.querySelector('.dynamic-svg-border')?.remove();
+
+                // **重要: 既存のSVGを全て削除する処理を確実に実行**
+                containerParent.querySelectorAll('.dynamic-svg-border').forEach(svg => svg.remove());
 
                 // ブラウザにリフローを強制し、正しい高さを確定させる
                 containerParent.getBoundingClientRect().height;
