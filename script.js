@@ -23,10 +23,10 @@ function animateStroke(el, duration) {
         function frame(timestamp) {
             if (!startTime) startTime = timestamp;
             const elapsed = timestamp - startTime;
-            
+
             const progress = Math.min(elapsed / duration, 1);
             const newOffset = length * (1 - progress);
-            
+
             el.style.strokeDashoffset = newOffset;
 
             if (progress < 1) {
@@ -47,7 +47,7 @@ async function drawBorderSVG(container) {
     const w = container.offsetWidth;
     const h = container.offsetHeight;
     if (w <= 2 || h <= 2) {
-        container.style.visibility = 'visible'; 
+        container.style.visibility = 'visible';
         container.style.opacity = '1';
         return;
     }
@@ -61,7 +61,7 @@ async function drawBorderSVG(container) {
     if (p.y2 < p.y1) p.y2 = p.y1;
 
     const points = `${p.x1},${p.y1} ${p.x2},${p.y1} ${p.x2},${p.y2} ${p.x1},${p.y2} ${p.x1},${p.y1}`;
-    const length = (p.x2 - p.x1) * 2 + (p.y2 - p.y1) * 2; 
+    const length = (p.x2 - p.x1) * 2 + (p.y2 - p.y1) * 2;
 
     const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
     polyline.setAttribute("points", points);
@@ -72,18 +72,19 @@ async function drawBorderSVG(container) {
     polyline.style.stroke = "#550";
     polyline.style.strokeWidth = "1px";
     svg.appendChild(polyline);
-    
+
     container.style.visibility = 'visible';
-    container.style.opacity = '1'; 
+    container.style.opacity = '1';
     container.appendChild(svg);
 
     const duration = length / LINE_DRAW_SPEED;
     await animateStroke(polyline, duration);
-    
+
     polyline.style.stroke = "#FF0";
     polyline.style.strokeWidth = "2px";
 
-    await sleep(POST_DRAW_TIME);
+    // コメントフォームの底辺消失を防ぐため、待機時間を最小限に短縮
+    await sleep(20);
 }
 
 /**
@@ -92,7 +93,7 @@ async function drawBorderSVG(container) {
 function drawBorderSVGStatic(container) {
     const w = container.offsetWidth;
     const h = container.offsetHeight;
-    if (w <= 2 || h <= 2) return; 
+    if (w <= 2 || h <= 2) return;
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "dynamic-svg-border");
@@ -103,11 +104,11 @@ function drawBorderSVGStatic(container) {
 
     const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
     polyline.setAttribute("points", points);
-    polyline.style.strokeDashoffset = 0; 
-    
+    polyline.style.strokeDashoffset = 0;
+
     polyline.style.stroke = "#FF0";
     polyline.style.strokeWidth = "2px";
-    
+
     svg.appendChild(polyline);
     container.appendChild(svg);
     container.style.visibility = 'visible';
@@ -124,7 +125,7 @@ async function drawElement(el) {
         el.style.opacity = '1';
         return;
     }
-    
+
     const preClass = `${type}-pre`;
     const postClass = `${type}-post`;
 
@@ -139,17 +140,17 @@ async function drawElement(el) {
     // 1. 共通の初期化処理
     el.classList.add('drawing-element-pre', preClass);
     el.style.visibility = 'visible';
-    el.style.opacity = '1'; 
-    
+    el.style.opacity = '1';
+
     // 2. 1文字ずつ表示 (isTypingText が true の場合)
-    if (isTypingText) { 
-        
+    if (isTypingText) {
+
         originalText = el.innerHTML;
-        
+
         const nodeContents = [];
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = originalText;
-        
+
         if (isAnchor) {
             nodeContents.push({ type: 'text', content: el.textContent.trim() });
         } else {
@@ -163,12 +164,12 @@ async function drawElement(el) {
                 }
             });
         }
-        
+
         const totalChars = nodeContents.reduce((sum, node) => sum + (node.type !== 'br' ? node.content.length : 0), 0);
         let currentTotalCharsDisplayed = 0;
-        
-        el.innerHTML = ''; 
-        
+
+        el.innerHTML = '';
+
         // 1文字ずつ表示アニメーション実行
         for (let i = 0; i < totalChars; i++) {
             currentTotalCharsDisplayed++;
@@ -177,8 +178,8 @@ async function drawElement(el) {
 
             for (const tNode of nodeContents) {
                 if (tNode.type === 'br') {
-                     tempContent += tNode.content; 
-                     continue;
+                    tempContent += tNode.content;
+                    continue;
                 }
                 const charsToDisplay = Math.min(tNode.content.length, currentTotalCharsDisplayed - charsProcessed);
                 if (charsToDisplay > 0) {
@@ -192,37 +193,35 @@ async function drawElement(el) {
                 charsProcessed += tNode.content.length;
             }
             el.innerHTML = tempContent;
-            
-            if (i < totalChars - 1) { 
-                 await sleep(TEXT_DRAW_SPEED);
+
+            if (i < totalChars - 1) {
+                await sleep(TEXT_DRAW_SPEED);
             }
         }
-    
+
         // 1文字ずつ表示完了後の待機
-        await sleep(100); 
+        await sleep(100);
 
     } else if (isFormAnim) {
         // 3. フォーム要素の枠線アニメーション
-        await sleep(PRE_DRAW_TIME); 
+        await sleep(PRE_DRAW_TIME);
     }
-    
+
     // 4. 塗りつぶしへ移行 (post)
     el.classList.remove('drawing-element-pre', preClass);
     el.classList.add('drawing-element-post', postClass);
-    
+
     // テキストタイプの場合、元の内容を完全表示に戻す
     if (isTypingText) {
-        el.innerHTML = originalText; 
+        el.innerHTML = originalText;
     }
-    
+
     await sleep(POST_DRAW_TIME / 2);
 }
 
 
 /**
  * メインの描画エンジン (再帰処理)
- * data-draw="comments" でコメントのロードと描画を待機し、
- * その後の要素（footerなど）の座標を確定させる。
  */
 async function drawEngine(rootElement) {
     // ':scope > [data-draw]' で直下の要素のみを取得
@@ -234,20 +233,31 @@ async function drawEngine(rootElement) {
         if (drawType === 'container') {
             await drawBorderSVG(child);
             // 枠線を描画してから、子要素を描画する
-            await drawEngine(child); 
-            
+            await drawEngine(child);
+
         } else if (drawType === 'element') {
             await drawElement(child);
-        
+
         } else if (drawType === 'comments') {
             // コメントリストの描画をここで待機
-            await initializeComments(child); 
-            
-            // コメント描画完了後、親要素の高さを確定させる
-            // コメントリストの描画によりrootElementの高さが変わったはず。
-            // ブラウザにリフローを強制し、次の要素を描画する際に正しい高さを参照させる。
-            rootElement.getBoundingClientRect().height; 
-            await sleep(50); // 念のため、短い待機時間を設ける
+            await initializeComments(child);
+
+            // ★★★ 修正箇所: コメント描画完了後、親コンテナの枠線SVGを正しい高さで再描画 ★★★
+            const containerParent = child.closest('[data-draw="container"]');
+            if (containerParent) {
+                // 既存のSVGを削除（フッターとの重なり防止と、高さの再取得のため）
+                containerParent.querySelector('.dynamic-svg-border')?.remove();
+
+                // ブラウザにリフローを強制し、正しい高さを確定させる
+                containerParent.getBoundingClientRect().height;
+
+                // 正しい高さで静的に枠線を描画する
+                drawBorderSVGStatic(containerParent);
+            }
+
+            // 親の親（rootElement）もリフローさせる（フッターの座標確定用）
+            rootElement.getBoundingClientRect().height;
+            await sleep(50);
         }
     }
 }
@@ -272,18 +282,18 @@ async function initializeComments(commentListElement) {
         comments.forEach(c => {
             const li = document.createElement("li");
             li.innerHTML = `<strong>${c.name}</strong>: ${c.comment}`;
-            
-            li.dataset.draw = "element"; 
-            li.dataset.drawType = "comment"; 
-            
-            commentListElement.appendChild(li); 
+
+            li.dataset.draw = "element";
+            li.dataset.drawType = "comment";
+
+            commentListElement.appendChild(li);
             commentElements.push(li);
         });
 
         // 2. アニメーション実行
         if (animate) {
             const drawTasks = commentElements.map(async (li) => {
-                await drawElement(li); 
+                await drawElement(li);
             });
             await Promise.all(drawTasks);
         } else {
@@ -294,18 +304,18 @@ async function initializeComments(commentListElement) {
                 li.classList.add('drawing-element-post', 'comment-post');
             }
         }
-        
+
         // ★★★ 最終修正箇所 A: コメントリストと親要素の高さ確定（リフロー強制） ★★★
         const parentContainer = commentListElement.closest('[data-draw="container"]');
-        
+
         // コメントリストの高さ確定
-        commentListElement.getBoundingClientRect().height; 
-        
+        commentListElement.getBoundingClientRect().height;
+
         // 最も近い親コンテナ（mainタグなど）の高さ確定
         if (parentContainer) {
-            parentContainer.getBoundingClientRect().height; 
+            parentContainer.getBoundingClientRect().height;
         }
-        await sleep(20); // わずかな待機
+        await sleep(20);
     }
 
     // コメントをサーバーまたはローカルストレージから取得する
@@ -340,7 +350,7 @@ async function initializeComments(commentListElement) {
             });
             if (!res.ok) throw new Error("送信失敗");
             form.reset();
-            await fetchComments(true); 
+            await fetchComments(true);
         } catch (e) {
             console.warn("Netlify関数エラー。ローカル保存:", e.message);
             const local = JSON.parse(localStorage.getItem("comments") || "[]");
@@ -353,8 +363,8 @@ async function initializeComments(commentListElement) {
 
 
     // 初回ロード時: コメントの取得と描画を実行し、完了まで drawEngine を待機させる
-    await fetchComments(true); 
-    
+    await fetchComments(true);
+
     // ★★★ 最終修正箇所 B: 親要素の再確認（リフロー強制） ★★★
     const grandParentContainer = commentListElement.closest('[data-draw="container"]');
     if (grandParentContainer) {
@@ -365,11 +375,11 @@ async function initializeComments(commentListElement) {
 
 /* ===== ページ読み込み時のメイン処理 ===== */
 document.addEventListener("DOMContentLoaded", async () => {
-    
+
     const terminal = document.getElementById('terminal-screen');
     // #terminal-screen 自体の枠線は描画せず、visibility/opacityのみONにする
     terminal.style.visibility = 'visible';
-    terminal.style.opacity = '1'; 
+    terminal.style.opacity = '1';
 
     // drawEngine が #terminal-screen の中身（nav, main, footer）を順番に描画開始
     await drawEngine(terminal);
