@@ -323,12 +323,9 @@ function initializeComments() {
 document.addEventListener("DOMContentLoaded", async () => {
     
     const terminal = document.getElementById('terminal-screen');
-    
-    terminal.style.visibility = 'visible'; 
-    
-    await drawBorderSVG(terminal);
-    
+    terminal.style.visibility = 'visible';
+    terminal.style.opacity = '1'; // コンテナ自体は透明のままで良い（中身が個別に描画されるため）
+
+    // drawEngine が #terminal-screen の「中身」を描画開始
     await drawEngine(terminal);
-    
-    initializeComments();
 });
