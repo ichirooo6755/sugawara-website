@@ -250,7 +250,7 @@ async function drawEngine(rootElement) {
 }
 
 
-/* ===== コメント機能 ===== */
+/* ===== コメント機能 (修正箇所) ===== */
 
 /**
  * コメント機能の初期化、データ取得、描画を担う (描画完了まで待機)
@@ -268,18 +268,18 @@ async function initializeComments(commentListElement) {
         comments.forEach(c => {
             const li = document.createElement("li");
             li.innerHTML = `<strong>${c.name}</strong>: ${c.comment}`;
-
-            li.dataset.draw = "element";
-            li.dataset.drawType = "comment";
-
-            commentListElement.appendChild(li);
+            
+            li.dataset.draw = "element"; 
+            li.dataset.drawType = "comment"; 
+            
+            commentListElement.appendChild(li); 
             commentElements.push(li);
         });
 
         // アニメーションを行う場合は、全要素の描画完了を待機
         if (animate) {
             const drawTasks = commentElements.map(async (li) => {
-                await drawElement(li);
+                await drawElement(li); 
             });
             await Promise.all(drawTasks);
         } else {
@@ -290,8 +290,14 @@ async function initializeComments(commentListElement) {
                 li.classList.add('drawing-element-post', 'comment-post');
             }
         }
+        
+        // ★★★ 修正箇所: 高さの強制再計算 ★★★
+        // コメントのli要素がすべて描画された後、親のUL要素のサイズを
+        // ブラウザに強制的に再計算させることで、次に親のコンテナの枠線を描画する際に
+        // 正しい高さが取得されるようにします。
+        commentListElement.getBoundingClientRect().height; 
     }
-
+    
     // コメントをサーバーまたはローカルストレージから取得する
     async function fetchComments(animateOnLoad = false) {
         try {
