@@ -12,6 +12,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /* ===== 描画エンジン (SVG/rAF) ===== */
 
+
 /**
  * 1本のSVGストローク(line/polyline)を requestAnimationFrame で描画する
  */
@@ -223,8 +224,6 @@ async function drawElement(el) {
 
 /**
  * メインの描画エンジン (再帰処理)
- * data-draw="comments" でコメントのロードと描画を待機し、
- * その後の要素（footerなど）の座標を確定させる。
  */
 async function drawEngine(rootElement) {
     // ':scope > [data-draw]' で直下の要素のみを取得
@@ -236,15 +235,20 @@ async function drawEngine(rootElement) {
         if (drawType === 'container') {
             await drawBorderSVG(child);
             // 枠線を描画してから、子要素を描画する
-            await drawEngine(child);
-
+            await drawEngine(child); 
+            
         } else if (drawType === 'element') {
             await drawElement(child);
-
+        
         } else if (drawType === 'comments') {
             // コメントリストの描画をここで待機
-            // コメントの読み込みと描画が完了するまで、drawEngineは次に進まない
-            await initializeComments(child);
+            await initializeComments(child); 
+            
+            // ★★★ 修正箇所: コメント描画完了後、親要素の高さを確定させる ★★★
+            // コメントリストの描画によりrootElement（この場合はmainタグ）の高さが変わったはず。
+            // ブラウザにリフローを強制し、次の要素を描画する際に正しい高さを参照させる。
+            rootElement.getBoundingClientRect().height; 
+            await sleep(50); // 念のため、短い待機時間を設ける
         }
     }
 }
@@ -297,7 +301,7 @@ async function initializeComments(commentListElement) {
         // 正しい高さが取得されるようにします。
         commentListElement.getBoundingClientRect().height; 
     }
-    
+
     // コメントをサーバーまたはローカルストレージから取得する
     async function fetchComments(animateOnLoad = false) {
         try {
