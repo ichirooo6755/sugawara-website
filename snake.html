@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SGWR Portfolio</title>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+</head>
+<canvas id="a" width="200" height="200"></canvas>
+<script>
+const a = document.getElementById("a");
+const c = a.getContext("2d");
+let x = 10, y = 10, vX = 10, vY = 0, S = [[x, y]], f = [50, 50];
+
+setInterval(() => {
+  x += vX; y += vY;
+  S.unshift([x, y]);
+  if (x == f[0] && y == f[1])
+    f = [~~(Math.random() * 20) * 10, ~~(Math.random() * 20) * 10];
+  else S.pop();
+
+  c.fillStyle = "#000"; c.fillRect(0, 0, 200, 200);
+  c.fillStyle = "lime"; S.forEach(p => c.fillRect(p[0], p[1], 10, 10));
+  c.fillStyle = "red"; c.fillRect(f[0], f[1], 10, 10);
+
+  if (x < 0 || y < 0 || x >= 200 || y >= 200 || S.slice(1).some(p => p[0]==x && p[1]==y))
+    location.reload();
+}, 100);
+
+onkeydown = e => {
+  if (e.key == "ArrowUp" && vY == 0) { vX = 0; vY = -10; }
+  if (e.key == "ArrowDown" && vY == 0) { vX = 0; vY = 10; }
+  if (e.key == "ArrowLeft" && vX == 0) { vX = -10; vY = 0; }
+  if (e.key == "ArrowRight" && vX == 0) { vX = 10; vY = 0; }
+};
+</script>
+</html>
