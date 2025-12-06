@@ -947,6 +947,7 @@
     const calibrationStatus = document.getElementById('calibration-status');
     const calibrationBtn = document.getElementById('calibration-btn');
     let calibrationHands = null;
+    let autoCalibrationTimer = null;
     
     function handleCalibration(results) {
       const hands = results.multiHandLandmarks || [];
@@ -969,15 +970,38 @@
       
       if (hands.length >= 2) {
         calibrationHands = hands;
-        calibrationStatus.textContent = '両手を検出しました！';
-        calibrationBtn.style.display = 'block';
+        calibrationStatus.textContent = '両手を検出！キャリブレーション中...';
+        calibrationBtn.style.display = 'none';
+        
+        // Auto-calibrate after detecting both hands
+        if (!autoCalibrationTimer) {
+          autoCalibrationTimer = setTimeout(() => {
+            if (calibrationHands && calibrationHands.length >= 2) {
+              const hand0 = calibrationHands[0];
+              const hand1 = calibrationHands[1];
+              const i0 = hand0[8];
+              const i1 = hand1[8];
+              calibrationDist = Math.hypot(i0.x - i1.x, i0.y - i1.y);
+              calibrated = true;
+              calibrationOverlay.style.display = 'none';
+              statusEl.textContent = 'CALIBRATED — CONTROL WITH HANDS';
+            }
+          }, 1000); // 1秒後に自動キャリブレーション
+        }
       } else {
         calibrationHands = null;
         calibrationStatus.textContent = `手を検出中... (${hands.length}/2)`;
         calibrationBtn.style.display = 'none';
+        
+        // Reset timer if hands lost
+        if (autoCalibrationTimer) {
+          clearTimeout(autoCalibrationTimer);
+          autoCalibrationTimer = null;
+        }
       }
     }
     
+    // Manual calibration button (backup)
     calibrationBtn.addEventListener('click', () => {
       if (calibrationHands && calibrationHands.length >= 2) {
         const hand0 = calibrationHands[0];
