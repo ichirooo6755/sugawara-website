@@ -6,6 +6,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SGWR Portfolio</title>
     <link rel="stylesheet" href="style.css" />
+    <style>
+        /* Page-specific animation styles */
+        #terminal-screen {
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        nav, .hero-section, .comment-section, footer {
+            visibility: visible;
+            opacity: 0;
+        }
+        
+        /* Typewriter text */
+        #text, #text2 {
+            position: fixed;
+            color: #fff;
+            font-size: clamp(16px, 2.5vw, 28px);
+            font-family: 'Orbitron', monospace;
+            letter-spacing: 3px;
+            z-index: 100;
+            text-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+        }
+        
+        #text {
+            left: 5vw;
+            top: 5vh;
+        }
+        
+        #text2 {
+            left: 5vw;
+            bottom: 5vh;
+        }
+        
+        /* Comment list visible */
+        #comment-list li {
+            opacity: 1;
+            visibility: visible;
+        }
+    </style>
 </head>
 
 <body>
@@ -15,51 +54,126 @@
     <!-- Scan Line Effects -->
     <div class="scan-line"></div>
     <div class="scan-line scan-line-wide"></div>
+    
+    <!-- Typewriter Text -->
+    <div id="text"></div>
+    <div id="text2"></div>
 
-    <div id="terminal-screen" class="draw-container">
+    <div id="terminal-screen" class="main-container">
 
-        <nav class="draw-container" data-draw="container">
-            <div class="nav-left" data-draw="element" data-draw-type="block-red">SGWR PORTFOLIO</div>
-            <div class="nav-links" data-draw="element" data-draw-type="text-yellow">
+        <nav>
+            <div class="nav-left">SGWR PORTFOLIO</div>
+            <div class="nav-links">
                 <a href="index.html" class="active">Home</a>
                 <a href="gallery.html">Gallery</a>
             </div>
         </nav>
 
-        <header class="hero-section draw-container" data-draw="container">
+        <header class="hero-section">
             <div class="hero-overlay">
-                <h1 class="hero-title" data-draw="element" data-draw-type="text-white">without film <br>still film</h1>
+                <h1 class="hero-title">without film <br>still film</h1>
             </div>
         </header>
 
-        <main class="comment-section draw-container" data-draw="container">
-            <h2 data-draw="element" data-draw-type="text-white">COMMENTS</h2>
+        <main class="comment-section">
+            <h2>COMMENTS</h2>
 
-            <form id="comment-form" class="draw-container" data-draw="container">
-                <input type="text" name="name" placeholder="お名前" required 
-                       data-draw="element" data-draw-type="form-input" />
-                <textarea name="comment" placeholder="コメントを入力..." required
-                          data-draw="element" data-draw-type="form-input"></textarea>
-                <button type="submit" data-draw="element" data-draw-type="form-button">送信</button>
+            <form id="comment-form">
+                <input type="text" name="name" placeholder="お名前" required />
+                <textarea name="comment" placeholder="コメントを入力..." required></textarea>
+                <button type="submit">送信</button>
             </form>
 
-            <ul id="comment-list" data-draw="comments"></ul>
+            <ul id="comment-list"></ul>
         </main>
 
-        <footer class="draw-container" data-draw="container">
-            <p data-draw="element" data-draw-type="text-gray">© 2025 SGWR PORTFOLIO</p>
+        <footer>
+            <p>© 2025 SGWR PORTFOLIO</p>
         </footer>
 
     </div>
 
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+    <script src="https://unpkg.com/typewriter-effect@latest/dist/core.js"></script>
     
-    <!-- Blueprint Script (Grid Animation) -->
+    <!-- Blueprint Script (Grid Animation + Typewriter + anime.js effects) -->
     <script src="blueprint.js"></script>
     
-    <!-- Drawing Animation Script -->
-    <script src="script.js"></script>
+    <!-- Comments Script -->
+    <script>
+        // コメント機能
+        (function() {
+            const form = document.getElementById('comment-form');
+            const commentList = document.getElementById('comment-list');
+            
+            if (!form || !commentList) return;
+            
+            function renderComments(comments) {
+                commentList.innerHTML = '';
+                comments.forEach(c => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${c.name}</strong>: ${c.comment}`;
+                    commentList.appendChild(li);
+                });
+            }
+            
+            async function fetchComments() {
+                try {
+                    const res = await fetch('/.netlify/functions/getComments');
+                    if (res.ok) {
+                        const comments = await res.json();
+                        renderComments(comments);
+                        localStorage.setItem('comments', JSON.stringify(comments));
+                        return;
+                    }
+                } catch (e) {}
+                
+                try {
+                    const res = await fetch('./comments.json');
+                    if (res.ok) {
+                        const comments = await res.json();
+                        renderComments(comments);
+                        localStorage.setItem('comments', JSON.stringify(comments));
+                        return;
+                    }
+                } catch (e) {}
+                
+                const local = JSON.parse(localStorage.getItem('comments') || '[]');
+                renderComments(local);
+            }
+            
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = form.name.value.trim();
+                const comment = form.comment.value.trim();
+                if (!name || !comment) return;
+                
+                const newComment = { name, comment, createdAt: new Date().toISOString() };
+                
+                try {
+                    const res = await fetch('/.netlify/functions/addComment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newComment)
+                    });
+                    if (res.ok) {
+                        form.reset();
+                        await fetchComments();
+                        return;
+                    }
+                } catch (e) {}
+                
+                const local = JSON.parse(localStorage.getItem('comments') || '[]');
+                local.push(newComment);
+                localStorage.setItem('comments', JSON.stringify(local));
+                renderComments(local);
+                form.reset();
+            });
+            
+            fetchComments();
+        })();
+    </script>
 </body>
 
 </html>
