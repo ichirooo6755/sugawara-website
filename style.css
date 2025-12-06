@@ -420,14 +420,127 @@ footer p {
 
 /* ========== Draw Animation Classes (Compatibility) ========== */
 .draw-container {
-  visibility: visible;
-  opacity: 1;
   position: relative;
+  margin-bottom: 10px;
+  padding: 10px;
+  visibility: hidden;
+  opacity: 0;
 }
 
+/* 動的SVG（枠線） */
+.dynamic-svg-border {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  z-index: 1;
+}
+
+.dynamic-svg-border line,
+.dynamic-svg-border polyline {
+  fill: none;
+  stroke-linecap: square;
+  transition: stroke 0.2s, stroke-width 0.2s;
+}
+
+/* アニメーション対象の要素 */
 .draw-element {
+  visibility: hidden;
+  opacity: 0;
+  position: relative;
+  z-index: 2;
+  transition: color 0.1s, text-shadow 0.1s, background-color 0.1s, border-color 0.1s;
+}
+
+/* =======================================
+   アニメーション用スタイル（ブループリントカラー）
+   ======================================= */
+
+/* --- 共通 --- */
+.drawing-element-pre {
   visibility: visible;
   opacity: 1;
+  color: transparent;
+}
+.drawing-element-post {
+  visibility: visible;
+  opacity: 1;
+  text-shadow: none;
+}
+
+/* --- タイプ: block-red (ロゴ) --- */
+.block-red-pre {
+}
+.block-red-post {
+  background-color: #00aaff;
+  color: #fff;
+  text-shadow: 0 0 10px rgba(0, 170, 255, 0.8);
+}
+
+/* --- テキスト要素 (1文字ずつ表示) --- */
+.text-white-pre {
+}
+.text-white-post {
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+.text-yellow-pre {
+}
+.text-yellow-post {
+  color: #00ffff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+.text-gray-pre {
+}
+.text-gray-post {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* コメント要素 (枠線アニメーション + 1文字ずつ表示) */
+.comment-pre {
+  color: transparent;
+  border-color: rgba(0, 255, 255, 0.3);
+}
+.comment-pre strong {
+  color: transparent;
+}
+.comment-post {
+  color: #fff;
+  border-color: #00ffff;
+}
+.comment-post strong {
+  color: #00ffff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+/* フォーム入力欄 (枠線アニメーション) */
+.form-input-pre {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: transparent;
+  background: rgba(0, 0, 0, 0.2);
+}
+.form-input-post {
+  border-color: #fff;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* フォームボタン (枠線アニメーション) */
+.form-button-pre {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: transparent;
+  background: transparent;
+}
+.form-button-post {
+  border-color: #00ffff;
+  color: #00ffff;
+  background: transparent;
+}
+.form-button-post:hover {
+  background: #00ffff;
+  color: var(--blueprint-blue);
 }
 
 /* ========== Responsive ========== */

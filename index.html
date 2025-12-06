@@ -16,36 +16,38 @@
     <div class="scan-line"></div>
     <div class="scan-line scan-line-wide"></div>
 
-    <div id="terminal-screen" class="main-container">
+    <div id="terminal-screen" class="draw-container">
 
-        <nav>
-            <div class="nav-left">SGWR PORTFOLIO</div>
-            <div class="nav-links">
+        <nav class="draw-container" data-draw="container">
+            <div class="nav-left" data-draw="element" data-draw-type="block-red">SGWR PORTFOLIO</div>
+            <div class="nav-links" data-draw="element" data-draw-type="text-yellow">
                 <a href="index.html" class="active">Home</a>
                 <a href="gallery.html">Gallery</a>
             </div>
         </nav>
 
-        <header class="hero-section">
+        <header class="hero-section draw-container" data-draw="container">
             <div class="hero-overlay">
-                <h1 class="hero-title">without film <br>still film</h1>
+                <h1 class="hero-title" data-draw="element" data-draw-type="text-white">without film <br>still film</h1>
             </div>
         </header>
 
-        <main class="comment-section">
-            <h2>COMMENTS</h2>
+        <main class="comment-section draw-container" data-draw="container">
+            <h2 data-draw="element" data-draw-type="text-white">COMMENTS</h2>
 
-            <form id="comment-form">
-                <input type="text" name="name" placeholder="お名前" required />
-                <textarea name="comment" placeholder="コメントを入力..." required></textarea>
-                <button type="submit">送信</button>
+            <form id="comment-form" class="draw-container" data-draw="container">
+                <input type="text" name="name" placeholder="お名前" required 
+                       data-draw="element" data-draw-type="form-input" />
+                <textarea name="comment" placeholder="コメントを入力..." required
+                          data-draw="element" data-draw-type="form-input"></textarea>
+                <button type="submit" data-draw="element" data-draw-type="form-button">送信</button>
             </form>
 
-            <ul id="comment-list"></ul>
+            <ul id="comment-list" data-draw="comments"></ul>
         </main>
 
-        <footer>
-            <p>© 2025 SGWR PORTFOLIO</p>
+        <footer class="draw-container" data-draw="container">
+            <p data-draw="element" data-draw-type="text-gray">© 2025 SGWR PORTFOLIO</p>
         </footer>
 
     </div>
@@ -53,103 +55,11 @@
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
     
-    <!-- Blueprint Script -->
+    <!-- Blueprint Script (Grid Animation) -->
     <script src="blueprint.js"></script>
     
-    <!-- Comments Script -->
-    <script>
-        // コメント機能（ブループリントスタイル用）
-        (function() {
-            const form = document.getElementById('comment-form');
-            const commentList = document.getElementById('comment-list');
-            
-            if (!form || !commentList) return;
-            
-            // コメントをレンダリング
-            function renderComments(comments) {
-                commentList.innerHTML = '';
-                comments.forEach(c => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<strong>${c.name}</strong>: ${c.comment}`;
-                    commentList.appendChild(li);
-                });
-            }
-            
-            // コメント取得
-            async function fetchComments() {
-                try {
-                    // Netlify Functionsから取得を試みる
-                    const res = await fetch('/.netlify/functions/getComments');
-                    if (res.ok) {
-                        const comments = await res.json();
-                        renderComments(comments);
-                        localStorage.setItem('comments', JSON.stringify(comments));
-                        return;
-                    }
-                } catch (e) {
-                    console.log('Netlify Functions利用不可、ローカルデータを使用');
-                }
-                
-                // ローカルのcomments.jsonを試す
-                try {
-                    const res = await fetch('./comments.json');
-                    if (res.ok) {
-                        const comments = await res.json();
-                        renderComments(comments);
-                        localStorage.setItem('comments', JSON.stringify(comments));
-                        return;
-                    }
-                } catch (e) {
-                    console.log('comments.json読み込み失敗');
-                }
-                
-                // LocalStorageから読み込み
-                const local = JSON.parse(localStorage.getItem('comments') || '[]');
-                renderComments(local);
-            }
-            
-            // フォーム送信
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const name = form.name.value.trim();
-                const comment = form.comment.value.trim();
-                if (!name || !comment) return;
-                
-                const newComment = { 
-                    name, 
-                    comment, 
-                    createdAt: new Date().toISOString() 
-                };
-                
-                try {
-                    // Netlify Functionsへ送信を試みる
-                    const res = await fetch('/.netlify/functions/addComment', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(newComment)
-                    });
-                    
-                    if (res.ok) {
-                        form.reset();
-                        await fetchComments();
-                        return;
-                    }
-                } catch (e) {
-                    console.log('Netlify Functions送信失敗、ローカル保存');
-                }
-                
-                // ローカル保存
-                const local = JSON.parse(localStorage.getItem('comments') || '[]');
-                local.push(newComment);
-                localStorage.setItem('comments', JSON.stringify(local));
-                renderComments(local);
-                form.reset();
-            });
-            
-            // 初期化
-            fetchComments();
-        })();
-    </script>
+    <!-- Drawing Animation Script -->
+    <script src="script.js"></script>
 </body>
 
 </html>
