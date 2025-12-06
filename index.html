@@ -56,8 +56,100 @@
     <!-- Blueprint Script -->
     <script src="blueprint.js"></script>
     
-    <!-- Original Script (for comments) -->
-    <script src="script.js"></script>
+    <!-- Comments Script -->
+    <script>
+        // コメント機能（ブループリントスタイル用）
+        (function() {
+            const form = document.getElementById('comment-form');
+            const commentList = document.getElementById('comment-list');
+            
+            if (!form || !commentList) return;
+            
+            // コメントをレンダリング
+            function renderComments(comments) {
+                commentList.innerHTML = '';
+                comments.forEach(c => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>${c.name}</strong>: ${c.comment}`;
+                    commentList.appendChild(li);
+                });
+            }
+            
+            // コメント取得
+            async function fetchComments() {
+                try {
+                    // Netlify Functionsから取得を試みる
+                    const res = await fetch('/.netlify/functions/getComments');
+                    if (res.ok) {
+                        const comments = await res.json();
+                        renderComments(comments);
+                        localStorage.setItem('comments', JSON.stringify(comments));
+                        return;
+                    }
+                } catch (e) {
+                    console.log('Netlify Functions利用不可、ローカルデータを使用');
+                }
+                
+                // ローカルのcomments.jsonを試す
+                try {
+                    const res = await fetch('./comments.json');
+                    if (res.ok) {
+                        const comments = await res.json();
+                        renderComments(comments);
+                        localStorage.setItem('comments', JSON.stringify(comments));
+                        return;
+                    }
+                } catch (e) {
+                    console.log('comments.json読み込み失敗');
+                }
+                
+                // LocalStorageから読み込み
+                const local = JSON.parse(localStorage.getItem('comments') || '[]');
+                renderComments(local);
+            }
+            
+            // フォーム送信
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = form.name.value.trim();
+                const comment = form.comment.value.trim();
+                if (!name || !comment) return;
+                
+                const newComment = { 
+                    name, 
+                    comment, 
+                    createdAt: new Date().toISOString() 
+                };
+                
+                try {
+                    // Netlify Functionsへ送信を試みる
+                    const res = await fetch('/.netlify/functions/addComment', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(newComment)
+                    });
+                    
+                    if (res.ok) {
+                        form.reset();
+                        await fetchComments();
+                        return;
+                    }
+                } catch (e) {
+                    console.log('Netlify Functions送信失敗、ローカル保存');
+                }
+                
+                // ローカル保存
+                const local = JSON.parse(localStorage.getItem('comments') || '[]');
+                local.push(newComment);
+                localStorage.setItem('comments', JSON.stringify(local));
+                renderComments(local);
+                form.reset();
+            });
+            
+            // 初期化
+            fetchComments();
+        })();
+    </script>
 </body>
 
 </html>
