@@ -244,7 +244,7 @@
   </select>
   <div id="modelControls" style="display:none;"></div>
   <input id="colorPicker" type="color" value="#00ffff" style="display:none;" />
-  <input id="debugToggle" type="checkbox" style="display:none;" />
+  <input id="debugToggle" type="checkbox" checked style="display:none;" />
 
   <!-- Status Bar -->
   <div id="status" class="blueprint-panel status-bar">
@@ -254,10 +254,18 @@
   <!-- 3D container -->
   <div id="app" class="w-screen h-screen" style="width:100vw;height:100vh;"></div>
 
-  <!-- Hidden camera elements -->
+  <!-- Camera elements -->
   <video id="input-video" playsinline style="display:none;"></video>
   <canvas id="debug-canvas"
-    style="display:none;position:fixed;right:1rem;top:5rem;width:16rem;height:9rem;z-index:100;"></canvas>
+    style="display:block;position:fixed;right:1rem;top:5rem;width:20rem;height:11.25rem;z-index:100;border:2px solid #00ffff;border-radius:10px;box-shadow:0 0 20px rgba(0,255,255,0.3);"></canvas>
+  
+  <!-- Calibration Overlay -->
+  <div id="calibration-overlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,117,188,0.95);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Orbitron',monospace;color:#fff;">
+    <h1 style="font-size:2rem;letter-spacing:5px;margin-bottom:20px;">CALIBRATION</h1>
+    <p style="font-size:1rem;letter-spacing:2px;margin-bottom:30px;">両手の人差し指を画面に表示してください</p>
+    <p id="calibration-status" style="font-size:0.9rem;color:#00ffff;">手を検出中...</p>
+    <button id="calibration-btn" style="display:none;margin-top:30px;padding:15px 40px;font-family:'Orbitron',monospace;font-size:1rem;background:#00ffff;color:#0f75bc;border:none;border-radius:30px;cursor:pointer;letter-spacing:3px;">START</button>
+  </div>
 
   <!-- Grid Animation Script -->
   <script>
@@ -608,10 +616,15 @@
     let targetScale = 1.2;
     let lastStableScale = 1.2;
     let grabStartTime = 0;
-    let targetExpansion = 0.2;
+    let targetExpansion = 0.0;
     let targetPos = { x: 0, y: 0, z: 0 };
     let lastPinchCenter = null;
     let lastPinchAngle = null;
+    
+    // Calibration state
+    let calibrated = false;
+    let calibrationDist = 0.3; // Default distance between index fingers
+    let lastIndexDist = null;
 
     function isPinched(hand) {
       if (!hand) return false;
@@ -700,7 +713,7 @@
           } else {
             if (Math.abs(dAngle) < 0.005) dAngle = 0;
           }
-          rotationVel.z = lerp(rotationVel.z, -dAngle * 4.0, 0.3);
+          rotationVel.z = lerp(rotationVel.z, dAngle * 4.0, 0.3); // Reversed direction
         }
         lastPinchAngle = angle;
 
@@ -732,17 +745,21 @@
         rotationVel.z *= 0.92;
       }
 
-      if (hands.length >= 2 && !pinchedPrimary && !pinchedSecondary) {
-        grabStartTime = 0;
-        actionState = "OPEN (EXPANDING)";
-        const getPalmCenter = (h) => ({ x: (h[0].x + h[9].x) * 0.5, y: (h[0].y + h[9].y) * 0.5 });
-        const p1 = getPalmCenter(primaryHand);
-        const p2 = getPalmCenter(secondaryHand);
-        const d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-        let val = Math.max(0, d - 0.2);
-        let te = val / 0.3;
-        te = Math.pow(te, 1.2) * 1.05;
-        targetExpansion = clamp(te, 0.0, 1.0);
+      // Explosion based on index finger distance (not palm open)
+      if (hands.length >= 2 && calibrated) {
+        const iA = primaryHand[8];
+        const iB = secondaryHand[8];
+        const indexDist = Math.hypot(iA.x - iB.x, iA.y - iB.y);
+        
+        // Calculate expansion based on distance relative to calibration
+        if (!pinchedPrimary && !pinchedSecondary) {
+          actionState = "INDEX DISTANCE (EXPLODING)";
+          // Larger distance = more expansion
+          let expansionRatio = (indexDist - calibrationDist) / calibrationDist;
+          expansionRatio = clamp(expansionRatio, -0.5, 2.0);
+          targetExpansion = clamp(expansionRatio, 0.0, 1.0);
+        }
+        lastIndexDist = indexDist;
       } else {
         if (hands.length < 2) targetExpansion = 0;
       }
@@ -946,6 +963,68 @@
 
     // Event listeners
     modelFileInput.addEventListener('change', (e) => loadModelFile(e.target.files[0]));
+    
+    // Calibration logic
+    const calibrationOverlay = document.getElementById('calibration-overlay');
+    const calibrationStatus = document.getElementById('calibration-status');
+    const calibrationBtn = document.getElementById('calibration-btn');
+    
+    let calibrationHands = null;
+    
+    function checkCalibration(results) {
+      if (calibrated) return;
+      
+      const hands = results.multiHandLandmarks || [];
+      
+      // Draw debug canvas during calibration too
+      if (debugCanvas.width === 0) {
+        debugCanvas.width = 640;
+        debugCanvas.height = 360;
+      }
+      drawCtx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
+      drawCtx.drawImage(results.image, 0, 0, debugCanvas.width, debugCanvas.height);
+      for (const hand of hands) {
+        drawCtx.fillStyle = 'rgba(0,255,255,0.8)';
+        for (const p of hand) {
+          drawCtx.beginPath();
+          drawCtx.arc(p.x * debugCanvas.width, p.y * debugCanvas.height, 4, 0, Math.PI * 2);
+          drawCtx.fill();
+        }
+      }
+      
+      if (hands.length >= 2) {
+        calibrationHands = hands;
+        calibrationStatus.textContent = '両手を検出しました！';
+        calibrationBtn.style.display = 'block';
+      } else {
+        calibrationHands = null;
+        calibrationStatus.textContent = `手を検出中... (${hands.length}/2)`;
+        calibrationBtn.style.display = 'none';
+      }
+    }
+    
+    calibrationBtn.addEventListener('click', () => {
+      if (calibrationHands && calibrationHands.length >= 2) {
+        const hand0 = calibrationHands[0];
+        const hand1 = calibrationHands[1];
+        const i0 = hand0[8]; // Index tip
+        const i1 = hand1[8];
+        calibrationDist = Math.hypot(i0.x - i1.x, i0.y - i1.y);
+        calibrated = true;
+        calibrationOverlay.style.display = 'none';
+        statusEl.textContent = 'CALIBRATED — SHOW HANDS TO CONTROL';
+      }
+    });
+    
+    // Modify gesture handler to check calibration first
+    const originalUpdateGestureControls = updateGestureControls;
+    updateGestureControls = function(results) {
+      if (!calibrated) {
+        checkCalibration(results);
+        return;
+      }
+      originalUpdateGestureControls(results);
+    };
   </script>
 </body>
 
