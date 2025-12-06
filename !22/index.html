@@ -355,6 +355,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
 
   <!-- Import map for modern Three.js -->
   <script type="importmap">
@@ -381,6 +382,70 @@
     const modeSelect = document.getElementById('modeSelect');
     const modelControls = document.getElementById('modelControls');
     const modelFileInput = document.getElementById('modelFile');
+    
+    // Face Mesh Setup
+    let faceMesh;
+    let faceLandmarks = null;
+    
+    function initFaceMesh() {
+      faceMesh = new FaceMesh({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`});
+      faceMesh.setOptions({
+        maxNumFaces: 1,
+        refineLandmarks: true,
+        minDetectionConfidence: 0.5,
+        minTrackingConfidence: 0.5
+      });
+      faceMesh.onResults((results) => {
+        if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+          faceLandmarks = results.multiFaceLandmarks[0];
+        } else {
+          faceLandmarks = null;
+        }
+      });
+    }
+
+    // Mosaic function
+    function applyMosaic(ctx, landmarks, width, height) {
+        if (!landmarks) return;
+        
+        // Calculate bounding box
+        let minX = width, minY = height, maxX = 0, maxY = 0;
+        for (const pt of landmarks) {
+            minX = Math.min(minX, pt.x * width);
+            minY = Math.min(minY, pt.y * height);
+            maxX = Math.max(maxX, pt.x * width);
+            maxY = Math.max(maxY, pt.y * height);
+        }
+        
+        // Add padding
+        const padding = 20;
+        minX = Math.max(0, minX - padding);
+        minY = Math.max(0, minY - padding);
+        maxX = Math.min(width, maxX + padding);
+        maxY = Math.min(height, maxY + padding);
+        
+        const w = maxX - minX;
+        const h = maxY - minY;
+        
+        if (w <= 0 || h <= 0) return;
+
+        // Mosaic effect
+        const sampleSize = 15;
+        // Optimization: Draw reduced image then scale up (faster than pixel loop)
+        ctx.imageSmoothingEnabled = false;
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = Math.ceil(w / sampleSize);
+        tempCanvas.height = Math.ceil(h / sampleSize);
+        
+        // Draw the region to temp canvas (shrunk)
+        tempCtx.drawImage(ctx.canvas, minX, minY, w, h, 0, 0, tempCanvas.width, tempCanvas.height);
+        
+        // Draw back scaled up
+        ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, minX, minY, w, h);
+        ctx.imageSmoothingEnabled = true;
+    }
+
 
     // THREE.js setup
     let renderer, scene, camera, particlePoints, particleGroup;
@@ -646,6 +711,10 @@
           debugCanvas.width = 640; debugCanvas.height = 360;
         }
         drawCtx.drawImage(results.image, 0, 0, debugCanvas.width, debugCanvas.height);
+        
+        // Apply Face Mosaic
+        applyMosaic(drawCtx, faceLandmarks, debugCanvas.width, debugCanvas.height);
+        
         for (const hand of hands) {
           drawCtx.fillStyle = 'rgba(0,255,255,0.8)';
           for (const p of hand) {
@@ -938,7 +1007,11 @@
 
       try {
         const cam = new Camera(videoEl, {
-          onFrame: async () => { await hands.send({ image: videoEl }); },
+          onFrame: async () => {
+            // Send to both models
+            await faceMesh.send({ image: videoEl });
+            await hands.send({ image: videoEl });
+          },
           width: 1280, height: 720
         });
         await cam.start();
@@ -966,6 +1039,10 @@
       }
       drawCtx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
       drawCtx.drawImage(results.image, 0, 0, debugCanvas.width, debugCanvas.height);
+      
+      // Apply Face Mosaic
+      applyMosaic(drawCtx, faceLandmarks, debugCanvas.width, debugCanvas.height);
+      
       for (const hand of hands) {
         drawCtx.fillStyle = 'rgba(0,255,255,0.8)';
         for (const p of hand) {
@@ -1042,6 +1119,7 @@
     // Init
     initThree();
     buildAllShapes();
+    initFaceMesh();
     
     // Auto-load default model
     loadModelUrl('./model.glb');
