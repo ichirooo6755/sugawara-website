@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D Hand Control | SGWR Portfolio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* ========== Terminator Blueprint Base ========== */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    html, body {
+      height: 100%;
+      font-family: 'Orbitron', monospace;
+      background: #0f75bc;
+      color: #fff;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* ========== CRT Scanline Effect ========== */
+    body::after {
+      content: "";
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(
+          rgba(18, 16, 16, 0) 50%,
+          rgba(0, 0, 0, 0.25) 50%
+        ),
+        linear-gradient(
+          90deg,
+          rgba(255, 0, 0, 0.06),
+          rgba(0, 255, 0, 0.02),
+          rgba(0, 0, 255, 0.06)
+        );
+      background-size: 100% 2px, 3px 100%;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ========== Grid Canvas ========== */
+    #grid-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ========== Scan Lines ========== */
+    .scan-line {
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100vw;
+      height: 5px;
+      background-color: rgba(255, 255, 255, 0.05);
+      z-index: 10;
+      animation: scan 3s linear infinite;
+      pointer-events: none;
+    }
+
+    .scan-line-wide {
+      height: 30px;
+      animation: scan 4s linear infinite;
+    }
+
+    @keyframes scan {
+      from { transform: translate3d(0, 0, 0); }
+      to { transform: translate3d(0, 100vh, 0); }
+    }
+
+    /* ========== UI Panel - Blueprint Style ========== */
+    .blueprint-panel {
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(15px);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
+      position: relative;
+    }
+
+    .blueprint-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 200%;
+      height: 100%;
+      background: linear-gradient(90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.1) 50%,
+          transparent 100%);
+      animation: shimmer 3s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-50%); }
+      100% { transform: translateX(50%); }
+    }
+
+    /* ========== Navigation ========== */
+    .nav-panel {
+      position: fixed;
+      top: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+    }
+
+    .nav-content {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 0.75rem 1.5rem;
+      border-radius: 50px;
+    }
+
+    .nav-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .nav-links a {
+      color: #fff;
+      text-decoration: none;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      padding: 0.5rem 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      transition: all 0.3s;
+    }
+
+    .nav-links a:hover {
+      background: #fff;
+      color: #0f75bc;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+    }
+
+    .btn-blueprint {
+      cursor: pointer;
+      background: transparent;
+      color: #00ffff;
+      border: 1px solid #00ffff;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .btn-blueprint:hover {
+      background: #00ffff;
+      color: #0f75bc;
+      box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+    }
+
+    /* ========== Status Bar ========== */
+    .status-bar {
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      padding: 0.5rem 1.5rem;
+      border-radius: 30px;
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    /* ========== Debug Canvas ========== */
+    #debug-canvas {
+      border: 2px solid #00ffff !important;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+      border-radius: 10px;
+    }
+
+    /* ========== 3D Container ========== */
+    #app {
+      position: relative;
+      z-index: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Grid Canvas Background -->
+  <canvas id="grid-canvas"></canvas>
+  
+  <!-- Scan Line Effects -->
+  <div class="scan-line"></div>
+  <div class="scan-line scan-line-wide"></div>
+
+  <!-- Navigation Panel -->
+  <div class="nav-panel">
+    <div class="blueprint-panel nav-content">
+      <span class="nav-title">3D HAND CONTROL</span>
+      <div class="nav-links">
+        <a href="../index.html">HOME</a>
+        <a href="../gallery.html">GALLERY</a>
+      </div>
+      <label for="modelFile" class="btn-blueprint">
+        <svg class="w-4 h-4" style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+        LOAD MODEL
+      </label>
+      <input id="modelFile" type="file" accept=".glb,.gltf" style="display:none;" />
+    </div>
+  </div>
+
+  <!-- Hidden elements for compatibility -->
+  <select id="templateSelect" style="display:none;">
+    <option value="hearts" selected>Hearts</option>
+  </select>
+  <select id="modeSelect" style="display:none;">
+    <option value="model" selected>Model</option>
+  </select>
+  <div id="modelControls" style="display:none;"></div>
+  <input id="colorPicker" type="color" value="#00ffff" style="display:none;" />
+  <input id="debugToggle" type="checkbox" style="display:none;" />
+
+  <!-- Status Bar -->
+  <div id="status" class="blueprint-panel status-bar">
+    INITIALIZING CAMERA AND MODELS…
+  </div>
+
+  <!-- 3D container -->
+  <div id="app" class="w-screen h-screen" style="width:100vw;height:100vh;"></div>
+
+  <!-- Hidden camera elements -->
+  <video id="input-video" playsinline style="display:none;"></video>
+  <canvas id="debug-canvas"
+    style="display:none;position:fixed;right:1rem;top:5rem;width:16rem;height:9rem;z-index:100;"></canvas>
+
+  <!-- Grid Animation Script -->
+  <script>
+    (function() {
+      const canvas = document.getElementById('grid-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      
+      let gridInitialized = false;
+      const grid = { x: [], y: [] };
+      const gridSize = 50;
+      
+      function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        initGrid();
+      }
+      
+      function initGrid() {
+        const xCount = Math.ceil(canvas.width / gridSize) + 1;
+        const yCount = Math.ceil(canvas.height / gridSize) + 1;
+        
+        grid.x = [];
+        grid.y = [];
+        
+        for (let i = 0; i <= xCount; i++) {
+          grid.x[i] = {
+            x: gridSize * i,
+            h: gridInitialized ? canvas.height : 0,
+            inc: yCount * 2
+          };
+        }
+        
+        for (let i = 0; i <= yCount; i++) {
+          grid.y[i] = {
+            y: gridSize * i,
+            w: gridInitialized ? canvas.width : 0,
+            inc: xCount * 2
+          };
+        }
+      }
+      
+      function renderGrid() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        
+        let xComplete = true, yComplete = true;
+        
+        for (let i = 0; i < grid.x.length; i++) {
+          const line = grid.x[i];
+          if (!gridInitialized && line.h < canvas.height) {
+            line.h += line.inc;
+            xComplete = false;
+          }
+          ctx.moveTo(line.x, 0);
+          ctx.lineTo(line.x, Math.min(line.h, canvas.height));
+        }
+        
+        for (let i = 0; i < grid.y.length; i++) {
+          const line = grid.y[i];
+          if (!gridInitialized && line.w < canvas.width) {
+            line.w += line.inc;
+            yComplete = false;
+          }
+          ctx.moveTo(0, line.y);
+          ctx.lineTo(Math.min(line.w, canvas.width), line.y);
+        }
+        
+        ctx.stroke();
+        if (xComplete && yComplete) gridInitialized = true;
+      }
+      
+      function animate() {
+        renderGrid();
+        requestAnimationFrame(animate);
+      }
+      
+      window.addEventListener('resize', resize);
+      resize();
+      animate();
+    })();
+  </script>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
+
+  <!-- Import map for modern Three.js -->
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    
+    // Basic selectors
+    const appEl = document.getElementById('app');
+    const statusEl = document.getElementById('status');
+    const videoEl = document.getElementById('input-video');
+    const debugCanvas = document.getElementById('debug-canvas');
+    const templateSelect = document.getElementById('templateSelect');
+    const colorPicker = document.getElementById('colorPicker');
+    const debugToggle = document.getElementById('debugToggle');
+    const modeSelect = document.getElementById('modeSelect');
+    const modelControls = document.getElementById('modelControls');
+    const modelFileInput = document.getElementById('modelFile');
+
+    // THREE.js setup
+    let renderer, scene, camera, particlePoints, particleGroup;
+    let geometry, material, positions, velocities, life, colors;
+    const PARTICLE_COUNT = 3000;
+    const targetShapes = { hearts: [], flowers: [], saturn: [] };
+    let currentTemplate = 'hearts';
+    let activeMode = 'model';
+
+    // Model mode state
+    let modelGroup;
+    let modelParts = [];
+    let modelRadius = 1;
+    let modelNormScale = 1;
+
+    // Gesture state
+    let haveHands = 0;
+    let lastIndexTip = null;
+    let rotationVel = { x: 0, y: 0, z: 0 };
+    const ROT_DAMP = 0.9;
+    let globalScale = 1.2;
+    let expansion = 0.2;
+
+    let fwCooldown = 0;
+    let drawCtx = debugCanvas.getContext('2d');
+
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    function makeCircleTexture(size = 128) {
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const ctx = c.getContext('2d');
+      const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+      g.addColorStop(0, 'rgba(0,255,255,1)');
+      g.addColorStop(0.3, 'rgba(0,255,255,0.9)');
+      g.addColorStop(1, 'rgba(0,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, size, size);
+      const tex = new THREE.CanvasTexture(c);
+      tex.minFilter = THREE.LinearFilter;
+      tex.magFilter = THREE.LinearFilter;
+      tex.generateMipmaps = false;
+      return tex;
+    }
+
+    function initThree() {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(appEl.clientWidth, appEl.clientHeight);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      appEl.appendChild(renderer.domElement);
+
+      // Blueprint Theme Scene
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0f75bc);
+
+      camera = new THREE.PerspectiveCamera(50, appEl.clientWidth / appEl.clientHeight, 0.1, 100);
+      camera.position.set(0, 1.2, 5);
+      camera.lookAt(0, 0, 0);
+
+      // Ambient
+      const ambient = new THREE.HemisphereLight(0x0a4a6a, 0x080808, 0.5);
+      scene.add(ambient);
+
+      // Key Light (Cyan tinted)
+      const keyLight = new THREE.SpotLight(0x00ffff, 80);
+      keyLight.position.set(3, 6, 4);
+      keyLight.angle = 0.4;
+      keyLight.penumbra = 0.8;
+      keyLight.decay = 2;
+      scene.add(keyLight);
+
+      // Rim Light (White)
+      const rimLight1 = new THREE.SpotLight(0xffffff, 60);
+      rimLight1.position.set(-4, 3, -3);
+      rimLight1.angle = 0.5;
+      rimLight1.penumbra = 1;
+      rimLight1.decay = 2;
+      scene.add(rimLight1);
+
+      // Rim Light 2 (Cyan)
+      const rimLight2 = new THREE.SpotLight(0x00ffff, 40);
+      rimLight2.position.set(4, 2, -4);
+      rimLight2.angle = 0.6;
+      rimLight2.penumbra = 1;
+      rimLight2.decay = 2;
+      scene.add(rimLight2);
+
+      // Fill Light (Blue)
+      const fillLight = new THREE.PointLight(0x0066ff, 15, 8);
+      fillLight.position.set(0, -2, 0);
+      scene.add(fillLight);
+
+      particleGroup = new THREE.Group();
+      scene.add(particleGroup);
+
+      modelGroup = new THREE.Group();
+      modelGroup.visible = true;
+      scene.add(modelGroup);
+
+      geometry = new THREE.BufferGeometry();
+      positions = new Float32Array(PARTICLE_COUNT * 3);
+      velocities = new Float32Array(PARTICLE_COUNT * 3);
+      life = new Float32Array(PARTICLE_COUNT);
+
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        const i3 = i * 3;
+        positions[i3] = (Math.random() - 0.5) * 4;
+        positions[i3 + 1] = (Math.random() - 0.5) * 4;
+        positions[i3 + 2] = (Math.random() - 0.5) * 4;
+        velocities[i3] = velocities[i3 + 1] = velocities[i3 + 2] = 0;
+        life[i] = Math.random() * 1;
+      }
+
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+      material = new THREE.PointsMaterial({
+        size: 0.06,
+        map: makeCircleTexture(),
+        transparent: true,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        color: new THREE.Color(0x00ffff)
+      });
+
+      particlePoints = new THREE.Points(geometry, material);
+      particlePoints.visible = false;
+      particleGroup.add(particlePoints);
+
+      window.addEventListener('resize', onResize);
+    }
+
+    function onResize() {
+      const w = appEl.clientWidth, h = appEl.clientHeight;
+      renderer.setSize(w, h);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+
+    // Shape generators
+    function buildHeartPoints(count = 2500) {
+      const pts = [];
+      for (let i = 0; i < count; i++) {
+        const t = Math.random() * Math.PI * 2;
+        const x = 16 * Math.pow(Math.sin(t), 3);
+        const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+        const nx = x / 18;
+        const ny = (y / 18) * 1.1;
+        const nz = (Math.random() - 0.5) * 0.6;
+        pts.push(new THREE.Vector3(nx, ny, nz));
+      }
+      return pts;
+    }
+
+    function buildFlowerPoints(count = 2500, k = 5) {
+      const pts = [];
+      for (let i = 0; i < count; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const r = Math.cos(k * theta);
+        const nx = r * Math.cos(theta);
+        const ny = r * Math.sin(theta);
+        const nz = (Math.random() - 0.5) * 0.8;
+        pts.push(new THREE.Vector3(nx, ny, nz));
+      }
+      return pts;
+    }
+
+    function buildSaturnPoints(count = 2500) {
+      const pts = [];
+      const ringCount = Math.floor(count * 0.6);
+      const planetCount = count - ringCount;
+      const tilt = 0.5;
+      for (let i = 0; i < ringCount; i++) {
+        const a = Math.random() * Math.PI * 2;
+        const r = 1.4 + (Math.random() - 0.5) * 0.15;
+        let x = r * Math.cos(a);
+        let y = (Math.random() - 0.5) * 0.05;
+        let z = r * Math.sin(a);
+        const ty = y * Math.cos(tilt) - z * Math.sin(tilt);
+        const tz = y * Math.sin(tilt) + z * Math.cos(tilt);
+        pts.push(new THREE.Vector3(x, ty, tz));
+      }
+      for (let i = 0; i < planetCount; i++) {
+        const u = Math.random();
+        const v = Math.random();
+        const phi = 2 * Math.PI * u;
+        const cosTheta = 2 * v - 1;
+        const sinTheta = Math.sqrt(1 - cosTheta * cosTheta);
+        const r = 0.8 + (Math.random() - 0.5) * 0.05;
+        const x = r * sinTheta * Math.cos(phi);
+        const y = r * sinTheta * Math.sin(phi);
+        const z = r * cosTheta;
+        pts.push(new THREE.Vector3(x, y, z));
+      }
+      return pts;
+    }
+
+    function buildAllShapes() {
+      targetShapes.hearts = buildHeartPoints();
+      targetShapes.flowers = buildFlowerPoints();
+      targetShapes.saturn = buildSaturnPoints();
+    }
+
+    // Gesture mapping
+    function getPrimaryHandIndex(hands) {
+      if (!hands || hands.length === 0) return 0;
+      if (hands.length === 1) return 0;
+      const i0 = hands[0][8];
+      const i1 = hands[1][8];
+      return (i0.x > i1.x) ? 0 : 1;
+    }
+
+    function computeOpenness(hand) {
+      if (!hand) return 0;
+      const wrist = hand[0];
+      const mcpIdx = [5, 9, 13, 17];
+      const tips = [8, 12, 16, 20];
+      let cx = wrist.x, cy = wrist.y;
+      for (const id of mcpIdx) { cx += hand[id].x; cy += hand[id].y; }
+      cx /= (mcpIdx.length + 1); cy /= (mcpIdx.length + 1);
+      const mid = hand[9];
+      const palmSize = Math.hypot(mid.x - wrist.x, mid.y - wrist.y) + 1e-6;
+      let avg = 0;
+      for (const id of tips) {
+        const p = hand[id];
+        avg += Math.hypot(p.x - cx, p.y - cy) / palmSize;
+      }
+      avg /= tips.length;
+      return clamp((avg - 0.3) / (0.7), 0, 1);
+    }
+
+    let targetScale = 1.2;
+    let lastStableScale = 1.2;
+    let grabStartTime = 0;
+    let targetExpansion = 0.2;
+    let targetPos = { x: 0, y: 0, z: 0 };
+    let lastPinchCenter = null;
+    let lastPinchAngle = null;
+
+    function isPinched(hand) {
+      if (!hand) return false;
+      const thumb = hand[4];
+      const index = hand[8];
+      const d = Math.hypot(thumb.x - index.x, thumb.y - index.y);
+      return d < 0.05;
+    }
+
+    function updateGestureControls(results) {
+      const hands = results.multiHandLandmarks || [];
+      haveHands = hands.length;
+
+      if (debugToggle && debugToggle.checked) {
+        debugCanvas.style.display = 'block';
+        drawCtx.save();
+        drawCtx.clearRect(0, 0, debugCanvas.width, debugCanvas.height);
+        if (debugCanvas.width === 0) {
+          debugCanvas.width = 640; debugCanvas.height = 360;
+        }
+        drawCtx.drawImage(results.image, 0, 0, debugCanvas.width, debugCanvas.height);
+        for (const hand of hands) {
+          drawCtx.fillStyle = 'rgba(0,255,255,0.8)';
+          for (const p of hand) {
+            drawCtx.beginPath();
+            drawCtx.arc(p.x * debugCanvas.width, p.y * debugCanvas.height, 2, 0, Math.PI * 2);
+            drawCtx.fill();
+          }
+        }
+        drawCtx.restore();
+      } else if (debugCanvas) {
+        debugCanvas.style.display = 'none';
+      }
+
+      const idx = getPrimaryHandIndex(hands);
+      const primaryHand = hands[idx];
+      const secondaryHand = hands.length > 1 ? hands[(idx + 1) % 2] : null;
+      const pinchedPrimary = isPinched(primaryHand);
+      const pinchedSecondary = isPinched(secondaryHand);
+
+      let actionState = "STANDBY";
+
+      if (!primaryHand || !pinchedPrimary) lastIndexTip = null;
+      if (hands.length < 2 || !pinchedPrimary || !pinchedSecondary) {
+        lastPinchCenter = null;
+        lastPinchAngle = null;
+      }
+
+      if (hands.length >= 2 && pinchedPrimary && pinchedSecondary) {
+        grabStartTime = 0;
+        actionState = "DUAL PINCH (MOVE/SCALE/SPIN)";
+
+        const handA = primaryHand[8].x < secondaryHand[8].x ? primaryHand : secondaryHand;
+        const handB = primaryHand[8].x < secondaryHand[8].x ? secondaryHand : primaryHand;
+        const iA = handA[8];
+        const iB = handB[8];
+
+        const dist = Math.hypot(iA.x - iB.x, iA.y - iB.y);
+        let s = (clamp(dist, 0.05, 0.8) - 0.05) / 0.75;
+        s = Math.pow(s, 1.2) * 5.0;
+        s = clamp(s, 0.1, 5.0);
+        if (Math.abs(s - lastStableScale) / lastStableScale > 0.05) {
+          targetScale = s;
+          lastStableScale = s;
+        }
+
+        const midX = (iA.x + iB.x) / 2;
+        const midY = (iA.y + iB.y) / 2;
+        const currentCenter = { x: midX, y: midY };
+
+        if (lastPinchCenter) {
+          const dx = (currentCenter.x - lastPinchCenter.x) * 12.0;
+          const dy = (currentCenter.y - lastPinchCenter.y) * 12.0;
+          targetPos.x += dx * 0.2;
+          targetPos.y -= dy * 0.2;
+        }
+        lastPinchCenter = currentCenter;
+
+        const angle = Math.atan2(iB.y - iA.y, iB.x - iA.x);
+        if (lastPinchAngle !== null) {
+          let dAngle = angle - lastPinchAngle;
+          if (dAngle > Math.PI) dAngle -= Math.PI * 2;
+          if (dAngle < -Math.PI) dAngle += Math.PI * 2;
+          if (Math.abs(dAngle) > 2.0) {
+            dAngle = 0;
+          } else {
+            if (Math.abs(dAngle) < 0.005) dAngle = 0;
+          }
+          rotationVel.z = lerp(rotationVel.z, -dAngle * 4.0, 0.3);
+        }
+        lastPinchAngle = angle;
+
+      } else if (primaryHand && pinchedPrimary && (!secondaryHand || !pinchedSecondary)) {
+        if (grabStartTime === 0) {
+          grabStartTime = performance.now();
+        } else if (performance.now() - grabStartTime > 100) {
+          actionState = "GRABBED (ROTATING)";
+          const tip = primaryHand[8];
+
+          if (lastIndexTip) {
+            const dx = tip.x - lastIndexTip.x;
+            const dy = tip.y - lastIndexTip.y;
+            if (Math.hypot(dx, dy) > 0.001) {
+              rotationVel.y = lerp(rotationVel.y, -dx * 3.5, 0.3);
+              rotationVel.x = lerp(rotationVel.x, -dy * 3.5, 0.3);
+            } else {
+              rotationVel.y = lerp(rotationVel.y, 0, 0.1);
+              rotationVel.x = lerp(rotationVel.x, 0, 0.1);
+            }
+          }
+          lastIndexTip = { x: tip.x, y: tip.y };
+        }
+      } else {
+        grabStartTime = 0;
+        lastIndexTip = null;
+        rotationVel.x *= 0.92;
+        rotationVel.y *= 0.92;
+        rotationVel.z *= 0.92;
+      }
+
+      if (hands.length >= 2 && !pinchedPrimary && !pinchedSecondary) {
+        grabStartTime = 0;
+        actionState = "OPEN (EXPANDING)";
+        const getPalmCenter = (h) => ({ x: (h[0].x + h[9].x) * 0.5, y: (h[0].y + h[9].y) * 0.5 });
+        const p1 = getPalmCenter(primaryHand);
+        const p2 = getPalmCenter(secondaryHand);
+        const d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+        let val = Math.max(0, d - 0.2);
+        let te = val / 0.3;
+        te = Math.pow(te, 1.2) * 1.05;
+        targetExpansion = clamp(te, 0.0, 1.0);
+      } else {
+        if (hands.length < 2) targetExpansion = 0;
+      }
+
+      globalScale = lerp(globalScale, targetScale, 0.2);
+      expansion = lerp(expansion, targetExpansion, 0.2);
+
+      const handMsg = hands.length ? `HANDS: ${hands.length} | ${actionState} | SCALE: ${globalScale.toFixed(2)}` : 'SHOW HANDS TO CONTROL';
+      statusEl.textContent = handMsg;
+    }
+
+    function updateParticles(dt) {
+      particleGroup.rotation.y += rotationVel.y * dt * 60;
+      particleGroup.rotation.x += rotationVel.x * dt * 60;
+      particleGroup.rotation.z += rotationVel.z * dt * 60;
+
+      const positionsAttr = geometry.getAttribute('position');
+      const count = PARTICLE_COUNT;
+
+      const follow = 2.5;
+      const outward = expansion * 1.2;
+      const damp = 0.88;
+
+      const target = targetShapes[currentTemplate];
+      const tCount = target.length;
+      for (let i = 0; i < count; i++) {
+        const i3 = i * 3;
+        const tp = target[i % tCount];
+        const tx = tp.x * globalScale;
+        const ty = tp.y * globalScale;
+        const tz = tp.z * globalScale;
+
+        const px = positions[i3];
+        const py = positions[i3 + 1];
+        const pz = positions[i3 + 2];
+
+        const ax = (tx - px) * follow * dt;
+        const ay = (ty - py) * follow * dt;
+        const az = (tz - pz) * follow * dt;
+
+        const len = Math.hypot(px, py, pz) + 1e-6;
+        const ox = (px / len) * outward * dt;
+        const oy = (py / len) * outward * dt;
+        const oz = (pz / len) * outward * dt;
+
+        velocities[i3] = (velocities[i3] + ax + ox) * damp;
+        velocities[i3 + 1] = (velocities[i3 + 1] + ay + oy) * damp;
+        velocities[i3 + 2] = (velocities[i3 + 2] + az + oz) * damp;
+
+        positions[i3] += velocities[i3] * dt;
+        positions[i3 + 1] += velocities[i3 + 1] * dt;
+        positions[i3 + 2] += velocities[i3 + 2] * dt;
+      }
+      positionsAttr.needsUpdate = true;
+    }
+
+    function updateModel(dt) {
+      if (!modelGroup || modelParts.length === 0) return;
+
+      modelGroup.rotation.y += rotationVel.y * dt * 60;
+      modelGroup.rotation.x += rotationVel.x * dt * 60;
+      modelGroup.rotation.z += rotationVel.z * dt * 60;
+
+      modelGroup.position.lerp(new THREE.Vector3(targetPos.x, targetPos.y, targetPos.z), 0.8);
+
+      const s = modelNormScale * clamp(globalScale, 0.2, 5);
+      modelGroup.scale.set(s, s, s);
+
+      const sep = expansion * modelRadius * 1.6;
+      for (const part of modelParts) {
+        part.obj.position.copy(part.base).addScaledVector(part.dir, sep);
+      }
+    }
+
+    function loadModelFile(file) {
+      if (!file) return;
+      try {
+        const url = URL.createObjectURL(file);
+        loadModelUrl(url, true);
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent = 'MODEL LOAD FAILED';
+      }
+    }
+
+    function loadModelUrl(url, revokeAfterLoad = false) {
+      try {
+        const loader = new GLTFLoader();
+        statusEl.textContent = 'LOADING MODEL…';
+        loader.load(url, (gltf) => {
+          if (revokeAfterLoad) URL.revokeObjectURL(url);
+          buildModelFromScene(gltf.scene || gltf.scenes?.[0]);
+          activeMode = 'model';
+          modeSelect.value = 'model';
+          particlePoints.visible = false;
+          modelGroup.visible = true;
+          statusEl.textContent = 'MODEL LOADED — USE HANDS TO CONTROL';
+        }, undefined, (err) => {
+          console.error(err);
+          if (revokeAfterLoad) URL.revokeObjectURL(url);
+          statusEl.textContent = 'MODEL LOAD FAILED';
+        });
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent = 'MODEL LOAD FAILED';
+      }
+    }
+
+    function buildModelFromScene(root) {
+      if (!root) { statusEl.textContent = 'INVALID MODEL'; return; }
+
+      while (modelGroup.children.length) modelGroup.remove(modelGroup.children[0]);
+      modelParts = [];
+
+      const meshes = [];
+      root.traverse((o) => { if (o.isMesh) meshes.push(o); });
+      if (meshes.length === 0) { statusEl.textContent = 'NO MESHES FOUND'; return; }
+
+      for (const m of meshes) {
+        m.updateWorldMatrix(true, true);
+        const world = m.matrixWorld.clone();
+        modelGroup.add(m);
+        world.decompose(m.position, m.quaternion, m.scale);
+        m.updateMatrix();
+        m.updateMatrixWorld(true);
+      }
+
+      modelGroup.updateMatrixWorld(true);
+      const box = new THREE.Box3().setFromObject(modelGroup);
+      const center = box.getCenter(new THREE.Vector3());
+      for (const m of meshes) { m.position.sub(center); m.updateMatrixWorld(true); }
+
+      const sphere = new THREE.Sphere();
+      new THREE.Box3().setFromObject(modelGroup).getBoundingSphere(sphere);
+      modelRadius = sphere.radius || 1;
+      modelNormScale = 1.2 / modelRadius;
+
+      for (const m of meshes) {
+        const cen = new THREE.Vector3();
+        new THREE.Box3().setFromObject(m).getCenter(cen);
+        m.position.sub(cen);
+        const base = cen.clone();
+        const dir = cen.clone().normalize();
+        modelParts.push({ obj: m, base, dir });
+        m.position.copy(base);
+      }
+    }
+
+    // MediaPipe Hands
+    async function startHands() {
+      const hands = new Hands({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+      });
+      hands.setOptions({
+        maxNumHands: 2,
+        modelComplexity: 1,
+        minDetectionConfidence: 0.65,
+        minTrackingConfidence: 0.65
+      });
+      hands.onResults(updateGestureControls);
+
+      try {
+        const cam = new Camera(videoEl, {
+          onFrame: async () => { await hands.send({ image: videoEl }); },
+          width: 1280, height: 720
+        });
+        await cam.start();
+        statusEl.textContent = 'CAMERA READY — SHOW HANDS TO CONTROL';
+      } catch (e) {
+        console.error(e);
+        statusEl.textContent = 'CAMERA ACCESS DENIED';
+      }
+    }
+
+    // Main loop
+    let lastTime = performance.now();
+    function loop() {
+      const now = performance.now();
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      if (activeMode === 'model') {
+        updateModel(dt);
+      } else {
+        updateParticles(dt);
+      }
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    }
+
+    // Init
+    initThree();
+    buildAllShapes();
+    
+    // Auto-load default model
+    loadModelUrl('./model.glb');
+    
+    startHands();
+    loop();
+
+    // Event listeners
+    modelFileInput.addEventListener('change', (e) => loadModelFile(e.target.files[0]));
+  </script>
+</body>
+
+</html>
