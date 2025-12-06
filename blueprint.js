@@ -1,6 +1,6 @@
 /**
  * Terminator T-800 Blueprint Effects
- * Grid animation, typewriter, and stroke animations
+ * Grid animation and anime.js content animations
  */
 
 (function() {
@@ -37,7 +37,7 @@
                 x: gridSize * i,
                 y: 0,
                 h: gridInitialized ? canvas.height : 0,
-                inc: yCount * 2  // Speed multiplier
+                inc: yCount * 2
             };
         }
         
@@ -46,7 +46,7 @@
                 x: 0,
                 y: gridSize * i,
                 w: gridInitialized ? canvas.width : 0,
-                inc: xCount * 2  // Speed multiplier
+                inc: xCount * 2
             };
         }
     }
@@ -61,7 +61,6 @@
         let xComplete = true;
         let yComplete = true;
         
-        // Draw vertical lines (growing downward)
         for (let i = 0; i < grid.x.length; i++) {
             const line = grid.x[i];
             
@@ -74,7 +73,6 @@
             ctx.lineTo(line.x, Math.min(line.h, canvas.height));
         }
         
-        // Draw horizontal lines (growing rightward)
         for (let i = 0; i < grid.y.length; i++) {
             const line = grid.y[i];
             
@@ -100,96 +98,68 @@
         requestAnimationFrame(animate);
     }
     
-    // ========== Typewriter Effect ==========
-    function initTypewriter() {
-        const textElement = document.getElementById('text');
-        const text2Element = document.getElementById('text2');
+    // ========== Content Animations with anime.js ==========
+    function initContentAnimations() {
+        if (typeof anime === 'undefined') return;
         
-        if (textElement && typeof Typewriter !== 'undefined') {
-            const typewriter = new Typewriter(textElement, {
-                delay: 30,
-                cursor: '█'
-            });
-            
-            typewriter
-                .pauseFor(800)
-                .typeString('SGWR PORTFOLIO')
-                .pauseFor(2000)
-                .start();
-        }
+        // Nav slides down
+        anime({
+            targets: 'nav',
+            opacity: [0, 1],
+            translateY: [-30, 0],
+            easing: 'easeOutExpo',
+            duration: 800,
+            delay: 300
+        });
         
-        if (text2Element && typeof Typewriter !== 'undefined') {
-            const typewriter2 = new Typewriter(text2Element, {
-                loop: true,
-                delay: 30,
-                cursor: '█'
-            });
-            
-            typewriter2
-                .pauseFor(3000)
-                .typeString('WITHOUT FILM')
-                .pauseFor(2500)
-                .deleteAll()
-                .pauseFor(300)
-                .typeString('STILL FILM')
-                .pauseFor(2500)
-                .deleteAll()
-                .start();
-        }
-    }
-    
-    // ========== SVG Stroke Animation with anime.js ==========
-    function initSVGAnimations() {
-        // Animate any SVG paths, circles, lines in the page
-        if (typeof anime !== 'undefined') {
-            // Animate nav border
-            anime({
-                targets: '.dynamic-svg-border polyline',
-                strokeDashoffset: [anime.setDashoffset, 0],
-                easing: 'easeInOutSine',
-                duration: 800,
-                delay: function(el, i) { return i * 100; }
-            });
-            
-            // Animate text with stagger
-            anime({
-                targets: '.hero-title',
-                opacity: [0, 1],
-                translateY: [30, 0],
-                easing: 'easeOutExpo',
-                duration: 1200,
-                delay: 1000
-            });
-            
-            // Animate comment section
-            anime({
-                targets: '.comment-section',
-                opacity: [0, 1],
-                translateX: [-20, 0],
-                easing: 'easeOutExpo',
-                duration: 800,
-                delay: 1500
-            });
-            
-            // Animate nav
-            anime({
-                targets: 'nav',
-                opacity: [0, 1],
-                translateY: [-20, 0],
-                easing: 'easeOutExpo',
-                duration: 600,
-                delay: 500
-            });
-            
-            // Animate footer
-            anime({
-                targets: 'footer',
-                opacity: [0, 1],
-                easing: 'easeOutExpo',
-                duration: 600,
-                delay: 2000
-            });
-        }
+        // Hero title fades in
+        anime({
+            targets: '.hero-section',
+            opacity: [0, 1],
+            scale: [0.9, 1],
+            easing: 'easeOutExpo',
+            duration: 1000,
+            delay: 600
+        });
+        
+        // Tagline section slides up
+        anime({
+            targets: '.tagline-section',
+            opacity: [0, 1],
+            translateY: [40, 0],
+            easing: 'easeOutExpo',
+            duration: 1000,
+            delay: 1000
+        });
+        
+        // Tagline text stagger animation
+        anime({
+            targets: '.tagline, .tagline-sub',
+            opacity: [0, 1],
+            translateY: [20, 0],
+            easing: 'easeOutExpo',
+            duration: 800,
+            delay: anime.stagger(200, {start: 1200})
+        });
+        
+        // Comment section slides in from left
+        anime({
+            targets: '.comment-section',
+            opacity: [0, 1],
+            translateX: [-30, 0],
+            easing: 'easeOutExpo',
+            duration: 800,
+            delay: 1500
+        });
+        
+        // Footer fades in
+        anime({
+            targets: 'footer',
+            opacity: [0, 1],
+            easing: 'easeOutExpo',
+            duration: 600,
+            delay: 1800
+        });
     }
     
     // ========== Initialize ==========
@@ -197,11 +167,9 @@
         resize();
         animate();
         
-        // Wait a bit for grid to start, then show content
         setTimeout(() => {
-            initTypewriter();
-            initSVGAnimations();
-        }, 300);
+            initContentAnimations();
+        }, 200);
     }
     
     // ========== Event Listeners ==========

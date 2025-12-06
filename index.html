@@ -13,30 +13,35 @@
             opacity: 1 !important;
         }
         
-        nav, .hero-section, .comment-section, footer {
+        nav, .hero-section, .tagline-section, .comment-section, footer {
             visibility: visible;
             opacity: 0;
         }
         
-        /* Typewriter text */
-        #text, #text2 {
-            position: fixed;
+        /* Tagline section between header and comments */
+        .tagline-section {
+            text-align: center;
+            padding: 40px 20px;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .tagline {
+            font-size: clamp(1.5rem, 4vw, 3rem);
+            font-weight: 700;
+            letter-spacing: 5px;
+            text-transform: uppercase;
             color: #fff;
-            font-size: clamp(16px, 2.5vw, 28px);
-            font-family: 'Orbitron', monospace;
-            letter-spacing: 3px;
-            z-index: 100;
-            text-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            margin: 0;
         }
         
-        #text {
-            left: 5vw;
-            top: 5vh;
-        }
-        
-        #text2 {
-            left: 5vw;
-            bottom: 5vh;
+        .tagline-sub {
+            font-size: clamp(1rem, 2.5vw, 1.8rem);
+            letter-spacing: 8px;
+            color: #00ffff;
+            text-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            margin-top: 15px;
         }
         
         /* Comment list visible */
@@ -54,10 +59,6 @@
     <!-- Scan Line Effects -->
     <div class="scan-line"></div>
     <div class="scan-line scan-line-wide"></div>
-    
-    <!-- Typewriter Text -->
-    <div id="text"></div>
-    <div id="text2"></div>
 
     <div id="terminal-screen" class="main-container">
 
@@ -71,9 +72,15 @@
 
         <header class="hero-section">
             <div class="hero-overlay">
-                <h1 class="hero-title">without film <br>still film</h1>
+                <h1 class="hero-title">PORTFOLIO</h1>
             </div>
         </header>
+
+        <!-- Tagline between header and comments -->
+        <section class="tagline-section">
+            <p class="tagline">WITHOUT FILM</p>
+            <p class="tagline-sub">STILL FILM</p>
+        </section>
 
         <main class="comment-section">
             <h2>COMMENTS</h2>
@@ -95,14 +102,12 @@
 
     <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
-    <script src="https://unpkg.com/typewriter-effect@latest/dist/core.js"></script>
     
-    <!-- Blueprint Script (Grid Animation + Typewriter + anime.js effects) -->
+    <!-- Blueprint Script -->
     <script src="blueprint.js"></script>
     
     <!-- Comments Script -->
     <script>
-        // コメント機能
         (function() {
             const form = document.getElementById('comment-form');
             const commentList = document.getElementById('comment-list');
