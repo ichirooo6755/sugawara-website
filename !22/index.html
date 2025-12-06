@@ -754,18 +754,25 @@
         // Calculate expansion based on distance relative to calibration
         if (!pinchedPrimary && !pinchedSecondary) {
           actionState = "INDEX DISTANCE (EXPLODING)";
-          // Larger distance = more expansion
-          let expansionRatio = (indexDist - calibrationDist) / calibrationDist;
-          expansionRatio = clamp(expansionRatio, -0.5, 2.0);
-          targetExpansion = clamp(expansionRatio, 0.0, 1.0);
+          
+          // Snap to 0 if close to calibration distance
+          if (indexDist <= calibrationDist * 1.1) {
+             targetExpansion = 0;
+          } else {
+             // Larger distance = more expansion
+             let expansionRatio = (indexDist - calibrationDist) / (calibrationDist * 0.5); // Increase sensitivity
+             targetExpansion = clamp(expansionRatio, 0.0, 1.0);
+          }
         }
         lastIndexDist = indexDist;
       } else {
         if (hands.length < 2) targetExpansion = 0;
       }
-
+      
+      // Smooth interpolation for expansion
+      expansion = lerp(expansion, targetExpansion, 0.1); // Slower lerp for weightier feel
+      
       globalScale = lerp(globalScale, targetScale, 0.2);
-      expansion = lerp(expansion, targetExpansion, 0.2);
 
       const handMsg = hands.length ? `HANDS: ${hands.length} | ${actionState} | SCALE: ${globalScale.toFixed(2)}` : 'SHOW HANDS TO CONTROL';
       statusEl.textContent = handMsg;
