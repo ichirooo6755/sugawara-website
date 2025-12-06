@@ -1,6 +1,6 @@
 /**
  * Terminator T-800 Blueprint Effects
- * Grid animation and anime.js content animations
+ * Grid animation, typing effect, and anime.js content animations
  */
 
 (function() {
@@ -98,6 +98,87 @@
         requestAnimationFrame(animate);
     }
     
+    // ========== Typing Effect (No Cursor) ==========
+    function typeText(element, text, speed = 50, callback) {
+        element.textContent = '';
+        element.style.visibility = 'visible';
+        element.style.opacity = '1';
+        let i = 0;
+        
+        function type() {
+            if (i < text.length) {
+                element.textContent += text.charAt(i);
+                i++;
+                setTimeout(type, speed);
+            } else if (callback) {
+                callback();
+            }
+        }
+        
+        type();
+    }
+    
+    // ========== Init Typing Effects ==========
+    function initTypingEffects() {
+        const navLeft = document.querySelector('.nav-left');
+        const heroTitle = document.querySelector('.hero-title');
+        const tagline = document.querySelector('.tagline');
+        const taglineSub = document.querySelector('.tagline-sub');
+        const commentHeader = document.querySelector('.comment-section h2');
+        
+        // Save original text
+        const texts = {
+            navLeft: navLeft ? navLeft.textContent : '',
+            heroTitle: heroTitle ? heroTitle.textContent : '',
+            tagline: tagline ? tagline.textContent : '',
+            taglineSub: taglineSub ? taglineSub.textContent : '',
+            commentHeader: commentHeader ? commentHeader.textContent : ''
+        };
+        
+        // Clear all text initially
+        if (navLeft) navLeft.textContent = '';
+        if (heroTitle) heroTitle.textContent = '';
+        if (tagline) tagline.textContent = '';
+        if (taglineSub) taglineSub.textContent = '';
+        if (commentHeader) commentHeader.textContent = '';
+        
+        // Start typing sequence after grid animation starts
+        setTimeout(() => {
+            // Nav left typing
+            if (navLeft) {
+                typeText(navLeft, texts.navLeft, 40);
+            }
+        }, 500);
+        
+        setTimeout(() => {
+            // Hero title typing
+            if (heroTitle) {
+                typeText(heroTitle, texts.heroTitle, 60);
+            }
+        }, 800);
+        
+        setTimeout(() => {
+            // Tagline typing
+            if (tagline) {
+                typeText(tagline, texts.tagline, 50, () => {
+                    // Tagline sub after main tagline
+                    if (taglineSub) {
+                        setTimeout(() => {
+                            typeText(taglineSub, texts.taglineSub, 50);
+                        }, 200);
+                    }
+                });
+            }
+        }, 1200);
+        
+        setTimeout(() => {
+            // Comment header typing
+            if (commentHeader) {
+                typeText(commentHeader, texts.commentHeader, 60);
+            }
+        }, 2000);
+    }
+    
     // ========== Content Animations with anime.js ==========
     function initContentAnimations() {
         if (typeof anime === 'undefined') return;
@@ -112,7 +193,7 @@
             delay: 300
         });
         
-        // Hero title fades in
+        // Hero section fades in
         anime({
             targets: '.hero-section',
             opacity: [0, 1],
@@ -130,16 +211,6 @@
             easing: 'easeOutExpo',
             duration: 1000,
             delay: 1000
-        });
-        
-        // Tagline text stagger animation
-        anime({
-            targets: '.tagline, .tagline-sub',
-            opacity: [0, 1],
-            translateY: [20, 0],
-            easing: 'easeOutExpo',
-            duration: 800,
-            delay: anime.stagger(200, {start: 1200})
         });
         
         // Comment section slides in from left
@@ -169,6 +240,7 @@
         
         setTimeout(() => {
             initContentAnimations();
+            initTypingEffects();
         }, 200);
     }
     

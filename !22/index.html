@@ -919,7 +919,15 @@
         minDetectionConfidence: 0.65,
         minTrackingConfidence: 0.65
       });
-      hands.onResults(updateGestureControls);
+      
+      // Combined handler for calibration and gesture control
+      hands.onResults((results) => {
+        if (!calibrated) {
+          handleCalibration(results);
+        } else {
+          updateGestureControls(results);
+        }
+      });
 
       try {
         const cam = new Camera(videoEl, {
@@ -927,56 +935,23 @@
           width: 1280, height: 720
         });
         await cam.start();
-        statusEl.textContent = 'CAMERA READY — SHOW HANDS TO CONTROL';
+        statusEl.textContent = 'CAMERA READY — SHOW HANDS';
       } catch (e) {
         console.error(e);
         statusEl.textContent = 'CAMERA ACCESS DENIED';
       }
     }
-
-    // Main loop
-    let lastTime = performance.now();
-    function loop() {
-      const now = performance.now();
-      const dt = Math.min((now - lastTime) / 1000, 0.1);
-      lastTime = now;
-
-      if (activeMode === 'model') {
-        updateModel(dt);
-      } else {
-        updateParticles(dt);
-      }
-
-      renderer.render(scene, camera);
-      requestAnimationFrame(loop);
-    }
-
-    // Init
-    initThree();
-    buildAllShapes();
     
-    // Auto-load default model
-    loadModelUrl('./model.glb');
-    
-    startHands();
-    loop();
-
-    // Event listeners
-    modelFileInput.addEventListener('change', (e) => loadModelFile(e.target.files[0]));
-    
-    // Calibration logic
+    // Calibration handler
     const calibrationOverlay = document.getElementById('calibration-overlay');
     const calibrationStatus = document.getElementById('calibration-status');
     const calibrationBtn = document.getElementById('calibration-btn');
-    
     let calibrationHands = null;
     
-    function checkCalibration(results) {
-      if (calibrated) return;
-      
+    function handleCalibration(results) {
       const hands = results.multiHandLandmarks || [];
       
-      // Draw debug canvas during calibration too
+      // Draw debug canvas during calibration
       if (debugCanvas.width === 0) {
         debugCanvas.width = 640;
         debugCanvas.height = 360;
@@ -1007,24 +982,44 @@
       if (calibrationHands && calibrationHands.length >= 2) {
         const hand0 = calibrationHands[0];
         const hand1 = calibrationHands[1];
-        const i0 = hand0[8]; // Index tip
+        const i0 = hand0[8];
         const i1 = hand1[8];
         calibrationDist = Math.hypot(i0.x - i1.x, i0.y - i1.y);
         calibrated = true;
         calibrationOverlay.style.display = 'none';
-        statusEl.textContent = 'CALIBRATED — SHOW HANDS TO CONTROL';
+        statusEl.textContent = 'CALIBRATED — CONTROL WITH HANDS';
       }
     });
-    
-    // Modify gesture handler to check calibration first
-    const originalUpdateGestureControls = updateGestureControls;
-    updateGestureControls = function(results) {
-      if (!calibrated) {
-        checkCalibration(results);
-        return;
+
+    // Main loop
+    let lastTime = performance.now();
+    function loop() {
+      const now = performance.now();
+      const dt = Math.min((now - lastTime) / 1000, 0.1);
+      lastTime = now;
+
+      if (activeMode === 'model') {
+        updateModel(dt);
+      } else {
+        updateParticles(dt);
       }
-      originalUpdateGestureControls(results);
-    };
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    }
+
+    // Init
+    initThree();
+    buildAllShapes();
+    
+    // Auto-load default model
+    loadModelUrl('./model.glb');
+    
+    startHands();
+    loop();
+
+    // Event listeners
+    modelFileInput.addEventListener('change', (e) => loadModelFile(e.target.files[0]));
   </script>
 </body>
 
