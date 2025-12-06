@@ -1,0 +1,484 @@
+/* =========================================
+   Terminator T-800 Blueprint Style
+   ========================================= */
+
+/* Google Fonts - OCR */
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap");
+
+:root {
+  --blueprint-blue: #0f75bc;
+  --blueprint-text: #fff;
+  --crt-scanline-dark: rgba(0, 0, 0, 0.25);
+  --grid-color: rgba(255, 255, 255, 0.4);
+}
+
+/* ========== Base ========== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Orbitron", "OCR A Std", monospace;
+  background-color: var(--blueprint-blue);
+  color: var(--blueprint-text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ========== CRT Scanline Effect ========== */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+      rgba(18, 16, 16, 0) 50%,
+      var(--crt-scanline-dark) 50%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 0, 0, 0.06),
+      rgba(0, 255, 0, 0.02),
+      rgba(0, 0, 255, 0.06)
+    );
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ========== Grid Canvas ========== */
+#grid-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ========== Scan Line Animation ========== */
+.scan-line {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 5px;
+  background-color: rgba(255, 255, 255, 0.05);
+  z-index: 10;
+  animation: scan 3s linear infinite;
+  pointer-events: none;
+}
+
+.scan-line-wide {
+  height: 30px;
+  animation: scan 4s linear infinite;
+}
+
+@keyframes scan {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, 100vh, 0);
+  }
+}
+
+/* ========== Main Container ========== */
+#terminal-screen,
+.main-container {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: 5vh 5vw;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ========== Navigation ========== */
+nav,
+.navbar {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: transparent;
+  border: 2px solid var(--blueprint-text);
+  margin-bottom: 20px;
+  z-index: 10;
+}
+
+.nav-left,
+.logo {
+  font-size: 1.5em;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+.nav-links {
+  display: flex;
+  gap: 20px;
+  list-style: none;
+}
+
+.nav-links a,
+.nav-links li a {
+  color: var(--blueprint-text);
+  text-decoration: none;
+  font-weight: 500;
+  letter-spacing: 1px;
+  padding: 5px 15px;
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+  opacity: 1;
+  visibility: visible;
+}
+
+.nav-links a:hover,
+.nav-links li a:hover {
+  border-color: var(--blueprint-text);
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.nav-links a.active {
+  border-color: var(--blueprint-text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ========== Hero Section ========== */
+.hero-section {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 40vh;
+  position: relative;
+}
+
+.hero-overlay {
+  padding: 40px;
+}
+
+.hero-title {
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  font-weight: 900;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.5),
+    0 0 40px rgba(255, 255, 255, 0.3);
+  animation: flicker 0.5s infinite alternate;
+}
+
+@keyframes flicker {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.9;
+  }
+}
+
+/* ========== Typewriter Text ========== */
+#text,
+#text2 {
+  position: fixed;
+  color: var(--blueprint-text);
+  font-size: clamp(18px, 3vw, 35px);
+  font-family: "Orbitron", "OCR A Std", monospace;
+  letter-spacing: 2px;
+  z-index: 100;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+#text {
+  left: 5vw;
+  top: 5vh;
+}
+
+#text2 {
+  left: 5vw;
+  bottom: 5vh;
+}
+
+/* ========== Comment Section ========== */
+.comment-section {
+  position: relative;
+  z-index: 10;
+  padding: 20px;
+  border: 2px solid var(--blueprint-text);
+  margin: 20px 0;
+  background: rgba(15, 117, 188, 0.8);
+}
+
+.comment-section h2 {
+  font-size: 1.5em;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+#comment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+#comment-form input,
+#comment-form textarea {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid var(--blueprint-text);
+  color: var(--blueprint-text);
+  padding: 12px 15px;
+  font-family: "Orbitron", monospace;
+  font-size: 1em;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+#comment-form input:focus,
+#comment-form textarea:focus {
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+#comment-form input::placeholder,
+#comment-form textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+#comment-form button {
+  background: transparent;
+  border: 2px solid var(--blueprint-text);
+  color: var(--blueprint-text);
+  padding: 12px 30px;
+  font-family: "Orbitron", monospace;
+  font-size: 1em;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#comment-form button:hover {
+  background: var(--blueprint-text);
+  color: var(--blueprint-blue);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+}
+
+#comment-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 20px;
+}
+
+#comment-list li {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 15px;
+  margin-bottom: 15px;
+  position: relative;
+  opacity: 1;
+}
+
+#comment-list li strong {
+  color: #00ffff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+/* ========== Footer ========== */
+footer {
+  text-align: center;
+  padding: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+  margin-top: auto;
+  z-index: 10;
+  position: relative;
+}
+
+footer p {
+  font-size: 0.9em;
+  letter-spacing: 2px;
+  opacity: 0.7;
+}
+
+/* ========== Gallery Styles (Blueprint Version) ========== */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  position: relative;
+  z-index: 10;
+}
+
+.gallery-item {
+  position: relative;
+  border: 2px solid var(--blueprint-text);
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.gallery-item:hover {
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+  transform: scale(1.02);
+}
+
+.gallery-item img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  filter: grayscale(30%) contrast(1.1);
+  transition: all 0.4s ease;
+}
+
+.gallery-item:hover img {
+  filter: grayscale(0%) contrast(1);
+}
+
+.meta-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+  color: var(--blueprint-text);
+  font-size: 0.85em;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.gallery-item:hover .meta-info {
+  opacity: 1;
+}
+
+/* ========== Controls ========== */
+.controls-wrapper {
+  padding: 20px;
+  background: transparent;
+  position: relative;
+  z-index: 10;
+}
+
+.controls {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.control-btn,
+.filter-btn {
+  background: transparent;
+  border: 2px solid var(--blueprint-text);
+  color: var(--blueprint-text);
+  padding: 10px 20px;
+  font-family: "Orbitron", monospace;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.control-btn:hover,
+.filter-btn:hover,
+.control-btn.active,
+.filter-btn.active {
+  background: var(--blueprint-text);
+  color: var(--blueprint-blue);
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+}
+
+/* ========== Header ========== */
+.site-header {
+  padding: 20px;
+  text-align: center;
+  border-bottom: 2px solid var(--blueprint-text);
+  background: transparent;
+}
+
+.site-header h1 {
+  font-size: 1.5em;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--blueprint-text);
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+}
+
+/* ========== Draw Animation Classes (Compatibility) ========== */
+.draw-container {
+  visibility: visible;
+  opacity: 1;
+  position: relative;
+}
+
+.draw-element {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+  nav,
+  .navbar {
+    flex-direction: column;
+    gap: 15px;
+    text-align: center;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  #text,
+  #text2 {
+    font-size: 14px;
+  }
+
+  .gallery {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+}
+
+/* ========== Utility Classes ========== */
+.hidden {
+  display: none !important;
+}
+
+.visible {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* ========== LightGallery Overrides ========== */
+.lg-backdrop {
+  background-color: rgba(15, 117, 188, 0.95) !important;
+}
+
+.lg-toolbar {
+  background: transparent !important;
+}
+
+.lg-toolbar .lg-close {
+  color: var(--blueprint-text) !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+}

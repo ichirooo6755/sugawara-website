@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SGWR Portfolio | Gallery</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="gallery.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/css/lightgallery.min.css" />
+</head>
+
+<body>
+    <!-- Grid Canvas Background -->
+    <canvas id="grid-canvas"></canvas>
+    
+    <!-- Scan Line Effects -->
+    <div class="scan-line"></div>
+    <div class="scan-line scan-line-wide"></div>
+
+    <div id="terminal-screen" class="main-container">
+
+        <nav>
+            <div class="nav-left">SGWR PORTFOLIO</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="gallery.html" class="active">Gallery</a>
+            </div>
+        </nav>
+
+        <header class="hero-section" style="min-height: 15vh;">
+            <div class="hero-overlay">
+                <h1 class="hero-title">GALLERY</h1>
+            </div>
+        </header>
+
+        <!-- Controls -->
+        <div class="controls-wrapper">
+            <div class="controls">
+                <button class="filter-btn active" data-filter="all">ALL PHOTOS</button>
+            </div>
+        </div>
+
+        <!-- Gallery Grid -->
+        <div class="gallery" id="gallery">
+            <!-- Gallery items will be loaded by JavaScript -->
+        </div>
+
+        <footer>
+            <p>© 2025 SGWR PORTFOLIO</p>
+        </footer>
+
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/lightgallery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/plugins/zoom/lg-zoom.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/plugins/thumbnail/lg-thumbnail.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+    
+    <!-- Blueprint Script -->
+    <script src="blueprint.js"></script>
+    
+    <!-- Gallery Script -->
+    <script src="gallery.js"></script>
+</body>
+
+</html>

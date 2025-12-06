@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SNAKE GAME | SGWR Portfolio</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        /* Snake Game Specific Styles */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            position: relative;
+            z-index: 10;
+        }
+        
+        #game-canvas {
+            border: 2px solid #fff;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+        }
+        
+        .game-instructions {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            letter-spacing: 2px;
+            opacity: 0.7;
+        }
+        
+        .game-score {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            letter-spacing: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Grid Canvas Background -->
+    <canvas id="grid-canvas"></canvas>
+    
+    <!-- Scan Line Effects -->
+    <div class="scan-line"></div>
+    <div class="scan-line scan-line-wide"></div>
+
+    <div id="terminal-screen" class="main-container">
+        
+        <nav>
+            <div class="nav-left">SGWR PORTFOLIO</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="gallery.html">Gallery</a>
+            </div>
+        </nav>
+
+        <header class="hero-section" style="min-height: 10vh;">
+            <div class="hero-overlay">
+                <h1 class="hero-title" style="font-size: 2rem;">SNAKE GAME</h1>
+            </div>
+        </header>
+
+        <main class="game-container">
+            <div class="game-score">SCORE: <span id="score">0</span></div>
+            <canvas id="game-canvas" width="400" height="400"></canvas>
+            <p class="game-instructions">USE ARROW KEYS TO MOVE</p>
+        </main>
+
+        <footer>
+            <p>© 2025 SGWR PORTFOLIO</p>
+        </footer>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+    
+    <!-- Blueprint Script -->
+    <script src="blueprint.js"></script>
+    
+    <!-- Snake Game Script -->
+    <script>
+        const canvas = document.getElementById("game-canvas");
+        const ctx = canvas.getContext("2d");
+        const scoreEl = document.getElementById("score");
+        
+        const gridSize = 20;
+        const tileCount = canvas.width / gridSize;
+        
+        let x = 10, y = 10;
+        let vX = 1, vY = 0;
+        let snake = [[x, y]];
+        let food = [Math.floor(Math.random() * tileCount), Math.floor(Math.random() * tileCount)];
+        let score = 0;
+        
+        function gameLoop() {
+            x += vX;
+            y += vY;
+            
+            // Wrap around edges
+            if (x < 0) x = tileCount - 1;
+            if (x >= tileCount) x = 0;
+            if (y < 0) y = tileCount - 1;
+            if (y >= tileCount) y = 0;
+            
+            snake.unshift([x, y]);
+            
+            // Check food collision
+            if (x === food[0] && y === food[1]) {
+                food = [Math.floor(Math.random() * tileCount), Math.floor(Math.random() * tileCount)];
+                score++;
+                scoreEl.textContent = score;
+            } else {
+                snake.pop();
+            }
+            
+            // Check self collision
+            for (let i = 1; i < snake.length; i++) {
+                if (snake[i][0] === x && snake[i][1] === y) {
+                    // Reset game
+                    snake = [[x, y]];
+                    score = 0;
+                    scoreEl.textContent = score;
+                    break;
+                }
+            }
+            
+            // Draw
+            ctx.fillStyle = "rgba(15, 117, 188, 0.3)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= tileCount; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * gridSize, 0);
+                ctx.lineTo(i * gridSize, canvas.height);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * gridSize);
+                ctx.lineTo(canvas.width, i * gridSize);
+                ctx.stroke();
+            }
+            
+            // Draw snake
+            ctx.fillStyle = "#00ff00";
+            ctx.shadowColor = "#00ff00";
+            ctx.shadowBlur = 10;
+            snake.forEach((seg, i) => {
+                const alpha = 1 - (i / snake.length) * 0.5;
+                ctx.fillStyle = `rgba(0, 255, 0, ${alpha})`;
+                ctx.fillRect(seg[0] * gridSize + 1, seg[1] * gridSize + 1, gridSize - 2, gridSize - 2);
+            });
+            
+            // Draw food
+            ctx.fillStyle = "#ff0000";
+            ctx.shadowColor = "#ff0000";
+            ctx.shadowBlur = 15;
+            ctx.fillRect(food[0] * gridSize + 2, food[1] * gridSize + 2, gridSize - 4, gridSize - 4);
+            
+            ctx.shadowBlur = 0;
+        }
+        
+        setInterval(gameLoop, 120);
+        
+        document.onkeydown = (e) => {
+            if (e.key === "ArrowUp" && vY === 0) { vX = 0; vY = -1; }
+            if (e.key === "ArrowDown" && vY === 0) { vX = 0; vY = 1; }
+            if (e.key === "ArrowLeft" && vX === 0) { vX = -1; vY = 0; }
+            if (e.key === "ArrowRight" && vX === 0) { vX = 1; vY = 0; }
+        };
+    </script>
+</body>
+</html>

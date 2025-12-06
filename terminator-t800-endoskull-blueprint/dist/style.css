@@ -1,0 +1,142 @@
+body {
+  margin: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background-color: #0f75bc;
+}
+body::after {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 9999;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+  content: "";
+}
+
+#c {
+  background-color: #0f75bc;
+  position: absolute;
+  z-index: 1;
+}
+
+#c2 {
+  background-color: transparent;
+  position: absolute;
+  z-index: 3;
+  width: 100vw;
+}
+
+#endo {
+  width: 100vw;
+  height: 100vh;
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#endo svg {
+  display: none;
+}
+#endo.active svg {
+  display: flex;
+}
+#endo::before {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 5px;
+  background-color: rgba(255, 255, 255, 0.05);
+  content: "";
+  -webkit-animation: 3000ms linear 1300ms forwards infinite scan;
+          animation: 3000ms linear 1300ms forwards infinite scan;
+}
+#endo::after {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 30px;
+  background-color: rgba(255, 255, 255, 0.05);
+  content: "";
+  -webkit-animation: 4000ms linear 0ms forwards infinite scan;
+          animation: 4000ms linear 0ms forwards infinite scan;
+}
+#endo #logo {
+  right: 5vw;
+  bottom: 5vh;
+}
+#endo #logo svg, #endo #logo line, #endo #logo path, #endo #logo ellipse, #endo #logo circle, #endo #logo polyline, #endo #logo polygon {
+  fill: #0f75bc;
+}
+#endo svg {
+  position: absolute;
+}
+#endo svg, #endo line, #endo path, #endo ellipse, #endo circle, #endo polyline, #endo polygon {
+  stroke: #fff;
+  stroke-width: 2;
+  fill: none;
+}
+
+#text {
+  position: absolute;
+  color: #fff;
+  font-size: 35px;
+  font-family: OCR A Std;
+  left: 5vw;
+  top: 5vh;
+  width: 460px;
+}
+
+#text2 {
+  position: absolute;
+  color: #fff;
+  font-size: 35px;
+  font-family: OCR A Std;
+  left: 5vw;
+  bottom: 5vh;
+  width: 460px;
+}
+
+@-webkit-keyframes scan {
+  from {
+    transform: translate3d(0, 0%, 0);
+  }
+  to {
+    transform: translate3d(0, 100vh, 0);
+  }
+}
+
+@keyframes scan {
+  from {
+    transform: translate3d(0, 0%, 0);
+  }
+  to {
+    transform: translate3d(0, 100vh, 0);
+  }
+}
+@-webkit-keyframes flicker {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.8;
+  }
+}
+@keyframes flicker {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.8;
+  }
+}

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SGWR Articles</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        /* Article Page Specific Styles */
+        .article-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+        
+        .article-card {
+            display: block;
+            text-decoration: none;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            overflow: hidden;
+            transition: all 0.4s ease;
+        }
+        
+        .article-card:hover {
+            border-color: #fff;
+            box-shadow: 0 0 30px rgba(255, 255, 255, 0.3);
+            transform: translateY(-5px);
+        }
+        
+        .article-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            filter: grayscale(30%) contrast(1.1);
+            transition: all 0.4s ease;
+        }
+        
+        .article-card:hover img {
+            filter: grayscale(0%);
+        }
+        
+        .article-card h2 {
+            color: #fff;
+            padding: 15px;
+            margin: 0;
+            font-size: 1em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            font-family: 'Orbitron', monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Grid Canvas Background -->
+    <canvas id="grid-canvas"></canvas>
+    
+    <!-- Scan Line Effects -->
+    <div class="scan-line"></div>
+    <div class="scan-line scan-line-wide"></div>
+
+    <div id="terminal-screen" class="main-container">
+        
+        <nav>
+            <div class="nav-left">SGWR PORTFOLIO</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="article.html" class="active">Articles</a>
+                <a href="gallery.html">Gallery</a>
+            </div>
+        </nav>
+
+        <header class="hero-section" style="min-height: 15vh;">
+            <div class="hero-overlay">
+                <h1 class="hero-title">ARTICLES</h1>
+            </div>
+        </header>
+
+        <!-- Article Grid -->
+        <main class="article-container">
+            <a href="#" class="article-card">
+                <img src="pictures/photo00001.jpg" alt="記事1画像">
+                <h2>記事タイトル1</h2>
+            </a>
+            <a href="#" class="article-card">
+                <img src="https://via.placeholder.com/400x250" alt="記事2画像">
+                <h2>記事タイトル2</h2>
+            </a>
+            <a href="#" class="article-card">
+                <img src="https://via.placeholder.com/400x250" alt="記事3画像">
+                <h2>記事タイトル3</h2>
+            </a>
+            <a href="#" class="article-card">
+                <img src="https://via.placeholder.com/400x250" alt="記事4画像">
+                <h2>記事タイトル4</h2>
+            </a>
+        </main>
+
+        <footer>
+            <p>© 2025 SGWR PORTFOLIO</p>
+        </footer>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+    
+    <!-- Blueprint Script -->
+    <script src="blueprint.js"></script>
+</body>
+</html>
