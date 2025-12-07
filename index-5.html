@@ -110,13 +110,17 @@
   <model-viewer
     id="viewer"
     src="!22/model.glb"
+    scale="0.01 0.01 0.01"
+    tone-mapping="neutral"
     poster="https://placehold.co/1080x1920/000000/FFFFFF/png?text=Loading+AR+Model..."
     alt="3D Model"
     ar
+    ar-scale="auto"
+    ar-placement="floor"
     ar-modes="webxr scene-viewer quick-look"
     camera-controls
     shadow-intensity="1"
-    exposure="1"
+    exposure="1.2"
     environment-image="neutral"
     auto-rotate
     auto-rotate-delay="2000"
