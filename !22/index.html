@@ -1140,19 +1140,30 @@
     const startOverlay = document.createElement('div');
     startOverlay.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,117,188,0.95);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"Orbitron",monospace;color:#fff;';
     startOverlay.innerHTML = `
-      <h1 style="font-size:2.5rem;letter-spacing:5px;margin-bottom:20px;text-align:center;">3D HAND CONTROL</h1>
-      <p style="font-size:1rem;letter-spacing:2px;margin-bottom:40px;opacity:0.8;">CAMERA ACCESS REQUIRED</p>
-      <button id="main-start-btn" style="padding:15px 50px;font-family:'Orbitron',monospace;font-size:1.2rem;background:#00ffff;color:#0f75bc;border:none;border-radius:30px;cursor:pointer;letter-spacing:3px;transition:transform 0.2s, box-shadow 0.2s;">
-        START SYSTEM
-      </button>
+      <h1 style="font-size:2.5rem;letter-spacing:5px;margin-bottom:20px;text-align:center;">SELECT MODE</h1>
+      <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;">
+        <button id="btn-gesture" style="padding:15px 40px;font-family:'Orbitron',monospace;font-size:1.1rem;background:#00ffff;color:#0f75bc;border:none;border-radius:30px;cursor:pointer;letter-spacing:2px;transition:transform 0.2s, box-shadow 0.2s;min-width:200px;">
+          GESTURE 3D
+        </button>
+        <button id="btn-ar" style="padding:15px 40px;font-family:'Orbitron',monospace;font-size:1.1rem;background:transparent;color:#fff;border:2px solid #fff;border-radius:30px;cursor:pointer;letter-spacing:2px;transition:background 0.2s;min-width:200px;">
+          AR MODE
+        </button>
+      </div>
+      <p style="margin-top:30px;font-size:0.9rem;opacity:0.8;">Gesture 3D requires camera calibration</p>
     `;
     document.body.appendChild(startOverlay);
     
-    document.getElementById('main-start-btn').addEventListener('click', () => {
+    // Gesture 3D: Start current logic
+    document.getElementById('btn-gesture').addEventListener('click', () => {
       startOverlay.style.opacity = '0';
       setTimeout(() => startOverlay.remove(), 500);
       startHands();
       loop();
+    });
+
+    // AR Mode: Navigate to AR page
+    document.getElementById('btn-ar').addEventListener('click', () => {
+       window.location.href = '../index-5.html';
     });
 
     // Event listeners
