@@ -1,12 +1,10 @@
-/* =========================================
-   Terminator T-800 Blueprint Style
-   ========================================= */
+
 
 /* Google Fonts - OCR */
 @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap");
 
 :root {
-  --blueprint-blue: #0f75bc;
+  --blueprint-blue: #b6bc0f;
   --blueprint-text: #fff;
   --crt-scanline-dark: rgba(0, 0, 0, 0.25);
   --grid-color: rgba(255, 255, 255, 0.4);
@@ -489,7 +487,7 @@ footer p {
 .text-yellow-pre {
 }
 .text-yellow-post {
-  color: #00ffff;
+  color: #aeff00;
   text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
 .text-gray-pre {
@@ -511,7 +509,7 @@ footer p {
   border-color: #00ffff;
 }
 .comment-post strong {
-  color: #00ffff;
+  color: #d0ff00;
   text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
 
@@ -534,12 +532,12 @@ footer p {
   background: transparent;
 }
 .form-button-post {
-  border-color: #00ffff;
-  color: #00ffff;
+  border-color: #99ff00;
+  color: #6aff00;
   background: transparent;
 }
 .form-button-post:hover {
-  background: #00ffff;
+  background: #bbff00;
   color: var(--blueprint-blue);
 }
 
