@@ -152,6 +152,19 @@
       }
     });
 
+    // Tint Model Logic
+    viewer.addEventListener('load', () => {
+      const model = viewer.model;
+      if (model && model.materials) {
+        model.materials.forEach(material => {
+          // Set to Cyan [R, G, B, A]
+          material.pbrMetallicRoughness.setBaseColorFactor([0.0, 1.0, 1.0, 1.0]);
+          material.pbrMetallicRoughness.setRoughnessFactor(0.2);
+          material.pbrMetallicRoughness.setMetallicFactor(0.8);
+        });
+      }
+    });
+
     // Progress Bar
     viewer.addEventListener('progress', (e) => {
       const percent = e.detail.totalProgress * 100;
