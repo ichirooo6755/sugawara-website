@@ -3,20 +3,30 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>AR 3D Model Viewer | SGWR</title>
   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <!-- Import model-viewer -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.3.0/model-viewer.min.js"></script>
   <style>
     html,
     body {
-      height: 100%;
+      height: 100dvh; /* Dynamic Viewport Height for Mobile */
+      width: 100%;
       background: #000000;
       margin: 0;
       padding: 0;
       overflow: hidden;
     }
 
-    /* Liquid Glass Effect (Ported from index.html) */
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      background-color: #000000;
+      --poster-color: transparent;
+    }
+
+    /* Liquid Glass Effect */
     .liquid-glass {
       background: linear-gradient(135deg,
           rgba(255, 255, 255, 0.15) 0%,
@@ -29,355 +39,128 @@
         0 8px 32px rgba(0, 0, 0, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.3),
         inset 0 -1px 0 rgba(255, 255, 255, 0.1);
-      position: relative;
-      overflow: hidden;
-    }
-
-    .liquid-glass::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -100%;
-      width: 200%;
-      height: 100%;
-      background: linear-gradient(90deg,
-          transparent 0%,
-          rgba(255, 255, 255, 0.1) 50%,
-          transparent 100%);
-      animation: shimmer 3s infinite;
-    }
-
-    @keyframes shimmer {
-      0% {
-        transform: translateX(-50%);
-      }
-
-      100% {
-        transform: translateX(50%);
-      }
-    }
-
-    .panel-blur {
-      backdrop-filter: blur(10px);
     }
     
-    /* AR Specific */
-    #ar-overlay {
+    /* Custom AR Button styling to match Liquid Glass */
+    .ar-button {
+      background-color: white;
+      border-radius: 40px;
+      border: none;
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none; /* Let clicks pass to canvas/ARButton */
-      z-index: 10;
-      display: none; /* Shown when AR is active if needed, or always visible for UI */
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 0px 24px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      font-family: sans-serif;
+      font-weight: bold;
+      font-size: 14px;
+      color: #333;
+      cursor: pointer;
+      z-index: 100;
+    }
+    
+    .ar-button:active {
+      transform: translateX(-50%) scale(0.95);
+    }
+
+    /* Hide default AR button since we customize slots */
+    model-viewer::part(default-ar-button) {
+      display: none; 
     }
   </style>
 </head>
 
 <body class="text-white">
 
-  <!-- UI Panel - Liquid Glass -->
-  <div class="fixed top-4 left-1/2 -translate-x-1/2 z-50">
-    <div class="liquid-glass rounded-3xl px-5 py-3 flex items-center gap-4">
-      <span class="text-sm font-medium text-white/90 tracking-wide">AR Viewer</span>
-      <label for="modelFile"
-        class="cursor-pointer bg-white/10 hover:bg-white/20 transition-all duration-300 rounded-xl px-4 py-2 text-sm text-white/90 border border-white/20 hover:border-white/40 flex items-center gap-2 pointer-events-auto">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        Load Model
+  <!-- UI Header -->
+  <div class="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+    <div class="liquid-glass rounded-2xl px-5 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="!22/index.html" class="bg-white/10 p-2 rounded-full hover:bg-white/20 transition">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        </a>
+        <span class="text-sm font-medium text-white/90 tracking-wide">AR View</span>
+      </div>
+      
+      <!-- Hidden file input for custom load if needed later -->
+      <label for="modelFile" class="cursor-pointer opacity-80 hover:opacity-100">
+         <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+         </svg>
       </label>
       <input id="modelFile" type="file" accept=".glb,.gltf" class="hidden" />
     </div>
   </div>
 
-  <!-- Status / Hints -->
-  <div id="status"
-    class="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 panel-blur bg-white/5 rounded-full px-4 py-2 text-xs sm:text-sm text-white/70 border border-white/10 text-center w-max max-w-[90vw]">
-    Not in AR. Click "AR" to begin.
-  </div>
-
-  <!-- Three.js + WebXR -->
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://unpkg.com/three@0.158.0/build/three.module.js",
-        "three/addons/": "https://unpkg.com/three@0.158.0/examples/jsm/"
-      }
-    }
-  </script>
-
-  <script type="module">
-    import * as THREE from 'three';
-    import { ARButton } from 'three/addons/webxr/ARButton.js';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-    let container;
-    let camera, scene, renderer;
-    let controller;
+  <!-- Model Viewer -->
+  <!-- 
+    src: Path to model
+    ar: Enables AR
+    ar-modes: webxr scene-viewer quick-look (Order matters: WebXR preferred, then Android native, then iOS native)
+    camera-controls: Mouse/Touch rotate
+    shadow-intensity: Shadow on ground
+    auto-rotate: Idle spin
+  -->
+  <model-viewer
+    id="viewer"
+    src="!22/model.glb"
+    poster="https://placehold.co/1080x1920/000000/FFFFFF/png?text=Loading+AR+Model..."
+    alt="3D Model"
+    ar
+    ar-modes="webxr scene-viewer quick-look"
+    camera-controls
+    shadow-intensity="1"
+    exposure="1"
+    environment-image="neutral"
+    auto-rotate
+    auto-rotate-delay="2000"
+  >
+    <!-- Custom AR Button (Slot) -->
+    <button slot="ar-button" class="ar-button">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+          d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+      </svg>
+      VIEW IN YOUR SPACE
+    </button>
     
-    let reticle;
-    let hitTestSource = null;
-    let hitTestSourceRequested = false;
+    <div slot="progress-bar" class="w-full h-1 bg-white/20 absolute top-0">
+       <div class="h-full bg-cyan-400 transition-all duration-100" id="progress"></div>
+    </div>
+  </model-viewer>
 
-    let placedObject = null; // The object we are manipulating
-    let placedGroup = new THREE.Group(); // Holds the object
+  <script>
+    const viewer = document.querySelector('#viewer');
+    const fileInput = document.querySelector('#modelFile');
+    const progress = document.querySelector('#progress');
 
-    // Interaction State
-    let isDragging = false;
-    let previousTouchPosition = { x: 0, y: 0 };
-    let initialPinchDistance = 0;
-    let initialScale = 1;
-
-    const statusEl = document.getElementById('status');
-    const modelFileInput = document.getElementById('modelFile');
-
-    init();
-    animate();
-
-    function init() {
-      container = document.createElement('div');
-      document.body.appendChild(container);
-
-      scene = new THREE.Scene();
-      // No background for AR (pass-through)
-      
-      camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
-
-      // Lights
-      const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 3);
-      light.position.set(0.5, 1, 0.25);
-      scene.add(light);
-
-      // Renderer
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.xr.enabled = true;
-      container.appendChild(renderer.domElement);
-
-      // AR Button
-      // Initialize with DOM Overlay support for UI interaction
-      document.body.appendChild(ARButton.createButton(renderer, { 
-        requiredFeatures: ['hit-test', 'dom-overlay'], 
-        domOverlay: { root: document.body } 
-      }));
-
-      // Reticle
-      reticle = new THREE.Mesh(
-        new THREE.RingGeometry(0.15, 0.2, 32).rotateX(-Math.PI / 2),
-        new THREE.MeshBasicMaterial()
-      );
-      reticle.matrixAutoUpdate = false;
-      reticle.visible = false;
-      scene.add(reticle);
-
-      // Scene Graph
-      scene.add(placedGroup);
-      
-      // Controller (Tap to place)
-      controller = renderer.xr.getController(0);
-      controller.addEventListener('select', onSelect);
-      scene.add(controller);
-
-      // Resize
-      window.addEventListener('resize', onWindowResize);
-
-      // File Input
-      modelFileInput.addEventListener('change', handleFileSelect);
-      
-      // Touch Events for Manipulation
-      // Note: We attach these to window to capture touches even over the canvas
-      window.addEventListener('touchstart', onTouchStart, { passive: false });
-      window.addEventListener('touchmove', onTouchMove, { passive: false });
-      window.addEventListener('touchend', onTouchEnd);
-
-      // Default object: Saturn-like torus
-      const geom = new THREE.TorusGeometry(0.3, 0.05, 16, 100);
-      const mat = new THREE.MeshStandardMaterial({ color: 0x00ffff, roughness: 0.2, metalness: 0.8 });
-      const defaultMesh = new THREE.Mesh(geom, mat);
-      defaultMesh.rotation.x = Math.PI / 2;
-      
-      placedGroup.userData.defaultMesh = defaultMesh;
-    }
-
-    function onSelect() {
-      if (reticle.visible) {
-        if (!placedObject) {
-          // First placement
-          placedObject = placedGroup.userData.defaultMesh.clone();
-          placedGroup.add(placedObject);
-          placedGroup.position.setFromMatrixPosition(reticle.matrix);
-          placedGroup.rotation.y = 0; // Reset rotation
-          statusEl.textContent = "Object Placed. Drag to Rotate, Pinch to Scale.";
-        } else {
-          // Move to new spot
-          placedGroup.position.setFromMatrixPosition(reticle.matrix);
-        }
+    // Handle Custom File Load
+    fileInput.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        viewer.src = url;
       }
-    }
+    });
 
-    function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    function animate() {
-      renderer.setAnimationLoop(render);
-    }
-
-    function render(timestamp, frame) {
-      if (frame) {
-        const referenceSpace = renderer.xr.getReferenceSpace();
-        const session = renderer.xr.getSession();
-
-        if (hitTestSourceRequested === false) {
-          session.requestReferenceSpace('viewer').then(function (referenceSpace) {
-            session.requestHitTestSource({ space: referenceSpace }).then(function (source) {
-              hitTestSource = source;
-            });
-          });
-          session.addEventListener('end', () => {
-             hitTestSourceRequested = false;
-             hitTestSource = null;
-             statusEl.textContent = "AR Session Ended.";
-          });
-          hitTestSourceRequested = true;
-          statusEl.textContent = "Scanning for surfaces... Point at floor/desk.";
-        }
-
-        if (hitTestSource) {
-          const hitTestResults = frame.getHitTestResults(hitTestSource);
-
-          if (hitTestResults.length > 0) {
-            const hit = hitTestResults[0];
-            reticle.visible = true;
-            reticle.matrix.fromArray(hit.getPose(referenceSpace).transform.matrix);
-            // Only update text if we haven't placed yet
-            if (!placedObject) statusEl.textContent = "Surface Found. Tap to Place.";
-          } else {
-            reticle.visible = false;
-          }
-        }
+    // Progress Bar
+    viewer.addEventListener('progress', (e) => {
+      const percent = e.detail.totalProgress * 100;
+      progress.style.width = `${percent}%`;
+      if (percent >= 100) {
+        setTimeout(() => progress.style.opacity = '0', 500);
+      } else {
+        progress.style.opacity = '1';
       }
-      
-      // Auto-rotate if nothing else happening and object exists
-      if (placedObject && !isDragging) {
-        placedObject.rotation.z += 0.01;
-      }
-
-      renderer.render(scene, camera);
-    }
-
-    // --- File Loading ---
-    function handleFileSelect(evt) {
-      const file = evt.target.files[0];
-      if (!file) return;
-
-      const url = URL.createObjectURL(file);
-      statusEl.textContent = "Loading Model...";
-      
-      const loader = new GLTFLoader();
-      loader.load(url, (gltf) => {
-        if (placedObject) {
-            placedGroup.remove(placedObject);
-            placedObject = null;
-        }
-        
-        const newObj = gltf.scene;
-        
-        // Normalize size
-        const box = new THREE.Box3().setFromObject(newObj);
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        const scale = 0.5 / (maxDim || 1); // Make it roughly 0.5 meters
-        newObj.scale.set(scale, scale, scale);
-        
-        // Center geometry
-        const center = box.getCenter(new THREE.Vector3());
-        // We shift the children or wrapper so the origin is at the center bottom
-        // But for simplicity, let's just center 0,0,0
-        newObj.position.sub(center.multiplyScalar(scale));
-
-        // Create a wrapper for the loaded model to be our "placedObject" for manipulation
-        // Wait, placedGroup holds the position. placedObject holds the model.
-        
-        placedGroup.userData.defaultMesh = newObj; // Update default to this for next tap
-        
-        // If already placed, swap immediately
-        if (placedGroup.children.length > 0) {
-            // Already active scene
-             placedObject = newObj.clone();
-             placedGroup.add(placedObject);
-             statusEl.textContent = "Model Swapped. Drag/Pinch to interact.";
-        } else {
-             // Not placed yet
-             statusEl.textContent = "Model Loaded. Tap surface to place.";
-        }
-
-      }, undefined, (err) => {
-        console.error(err);
-        statusEl.textContent = "Error loading model.";
-      });
-    }
-
-    // --- Touch Interaction (DOM Overlay) ---
-    function onTouchStart(e) {
-      // Don't prevent default on UI elements (Label, Input, Button)
-      if (e.target.closest('label') || e.target.closest('button') || e.target.closest('input')) return; 
-
-      if (e.touches.length === 1) {
-        isDragging = true;
-        previousTouchPosition = { x: e.touches[0].pageX, y: e.touches[0].pageY };
-      } else if (e.touches.length === 2 && placedObject) {
-        isDragging = true; 
-        const dx = e.touches[0].pageX - e.touches[1].pageX;
-        const dy = e.touches[0].pageY - e.touches[1].pageY;
-        initialPinchDistance = Math.hypot(dx, dy);
-        initialScale = placedObject.scale.x;
-      }
-    }
-
-    function onTouchMove(e) {
-      if (e.target.closest('label') || e.target.closest('button') || e.target.closest('input')) return;
-      
-      if (!placedObject) return;
-
-      if (e.touches.length === 1 && isDragging) {
-        const deltaX = e.touches[0].pageX - previousTouchPosition.x;
-        // const deltaY = e.touches[0].pageY - previousTouchPosition.y;
-        
-        // Rotate around Y axis (vertical) based on horizontal drag
-        placedGroup.rotation.y += deltaX * 0.005;
-        
-        previousTouchPosition = { x: e.touches[0].pageX, y: e.touches[0].pageY };
-      } 
-      else if (e.touches.length === 2) {
-         const dx = e.touches[0].pageX - e.touches[1].pageX;
-         const dy = e.touches[0].pageY - e.touches[1].pageY;
-         const distance = Math.hypot(dx, dy);
-         
-         if (initialPinchDistance > 0) {
-           const scaleFactor = distance / initialPinchDistance;
-           const newScale = initialScale * scaleFactor;
-           // Limit scale
-           if(newScale > 0.05 && newScale < 5.0) {
-               placedObject.scale.set(newScale, newScale, newScale);
-           }
-         }
-      }
-    }
-
-    function onTouchEnd() {
-      isDragging = false;
-      previousTouchPosition = { x: 0, y: 0 };
-      initialPinchDistance = 0;
-    }
-
+    });
+    
   </script>
-</body>
 
+</body>
 </html>
