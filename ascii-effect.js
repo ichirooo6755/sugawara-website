@@ -1,47 +1,70 @@
 /**
- * ASCII Visual Effect - Vanilla Three.js Implementation
- * Renders a 3D torus knot with ASCII shader post-processing
+ * ASCIIビジュアルエフェクト - Three.js実装
+ * 3DモデルをASCIIシェーダーでポストプロセス
  */
 
 (function() {
     'use strict';
 
-    // Configuration
+    // ========== 設定 ==========
     const CONFIG = {
-        cellSize: 4,
-        invert: false,
-        colorMode: true,
-        backgroundColor: 0xd9eb37,
-        modelColor: 0x00BFFF,
-        modelScale: 0.1,
+        cellSize: 4,                    // ASCIIセルのサイズ（ピクセル）
+        invert: false,                  // 明暗を反転
+        colorMode: true,                // カラーモード（falseでモノクロ）
+        backgroundColor: 0xd9eb37,      // 背景色（黄緑）
+        modelColor: 0x00BFFF,           // モデルの色（水色）
+        modelScale: 0.05,               // モデルのスケール（0.05 = 5%）
         postfx: {
-            scanlineIntensity: 0,
-            scanlineCount: 100,
-            targetFPS: 0,
-            jitterIntensity: 0,
-            jitterSpeed: 0,
-            mouseGlowEnabled: true,
-            mouseGlowRadius: 50,
-            mouseGlowIntensity: 0.3,
-            vignetteIntensity: 0,
-            vignetteRadius: 0.5,
-            colorPalette: 0,
-            curvature: 0.04,
-            aberrationStrength: 0,
-            noiseIntensity: 0,
-            noiseScale: 1,
-            noiseSpeed: 1,
-            waveAmplitude: 0,
-            waveFrequency: 1,
-            waveSpeed: 0,
-            glitchIntensity: 0,
-            glitchFrequency: 0,
-            brightnessAdjust: 0,
-            contrastAdjust: 1.19
+            // ========== スキャンライン ==========
+            scanlineIntensity: 0,       // スキャンラインの強さ（0-1）
+            scanlineCount: 100,         // スキャンラインの本数
+            
+            // ========== フレームレート ==========
+            targetFPS: 0,               // 目標FPS（0で無制限）
+            
+            // ========== ジッター効果 ==========
+            jitterIntensity: 0,         // ジッターの強さ
+            jitterSpeed: 0,             // ジッターの速度
+            
+            // ========== マウスグロー ==========
+            mouseGlowEnabled: true,     // マウスグローを有効化
+            mouseGlowRadius: 50,        // グローの半径
+            mouseGlowIntensity: 0.3,    // グローの強さ
+            
+            // ========== ビネット ==========
+            vignetteIntensity: 0,       // ビネットの強さ（0-1）
+            vignetteRadius: 0.5,        // ビネットの半径
+            
+            // ========== カラーパレット ==========
+            colorPalette: 0,            // 0=オリジナル, 1=緑, 2=琥珀, 3=シアン, 4=青
+            
+            // ========== 画面湾曲 ==========
+            curvature: 0.04,            // CRTモニター風の湾曲（0で無効）
+            
+            // ========== 色収差 ==========
+            aberrationStrength: 0,      // RGBずれの強さ
+            
+            // ========== ノイズ ==========
+            noiseIntensity: 0,          // ノイズの強さ
+            noiseScale: 1,              // ノイズのスケール
+            noiseSpeed: 1,              // ノイズのアニメーション速度
+            
+            // ========== 波形歪み ==========
+            waveAmplitude: 0,           // 波の振幅
+            waveFrequency: 1,           // 波の周波数
+            waveSpeed: 0,               // 波のアニメーション速度
+            
+            // ========== グリッチ ==========
+            glitchIntensity: 0,         // グリッチの強さ
+            glitchFrequency: 0,         // グリッチの頻度
+            
+            // ========== 明るさ・コントラスト ==========
+            brightnessAdjust: 0,        // 明るさ調整（-1 〜 1）
+            contrastAdjust: 1.19        // コントラスト調整（1が標準）
         }
     };
 
-    // ASCII Fragment Shader
+    // ASCIIフラグメントシェーダー
     const asciiFragmentShader = `
 uniform sampler2D tDiffuse;
 uniform float cellSize;
@@ -127,7 +150,7 @@ void main() {
     vec2 uv = vUv;
     vec2 workUV = uv;
 
-    // Screen curvature
+    // 画面湾曲エフェクト
     if (curvature > 0.0) {
         vec2 centered = workUV * 2.0 - 1.0;
         centered *= 1.0 + curvature * dot(centered, centered);
@@ -138,13 +161,14 @@ void main() {
         }
     }
 
-    // Wave distortion
+    // 波形歪みエフェクト
     if (waveAmplitude > 0.0) {
         workUV.x += sin(workUV.y * waveFrequency + time * waveSpeed) * waveAmplitude;
         workUV.y += cos(workUV.x * waveFrequency + time * waveSpeed) * waveAmplitude;
     }
 
     vec4 sampledColor;
+    // 色収差エフェクト
     if (aberrationStrength > 0.0) {
         float offset = aberrationStrength;
         vec2 uvR = workUV + vec2(offset, 0.0);
@@ -158,20 +182,20 @@ void main() {
         sampledColor = texture2D(tDiffuse, workUV);
     }
 
-    // Contrast and brightness
+    // コントラストと明るさの調整
     sampledColor.rgb = (sampledColor.rgb - 0.5) * contrastAdjust + 0.5 + brightnessAdjust;
 
-    // Time-based noise
+    // ノイズエフェクト
     if (noiseIntensity > 0.0) {
         float noiseVal = noise(workUV * noiseScale + time * noiseSpeed);
         sampledColor.rgb += (noiseVal - 0.5) * noiseIntensity;
     }
 
-    // ASCII cell calculation
+    // ASCIIセル計算
     vec2 cellCount = resolution / cellSize;
     vec2 cellCoord = floor(uv * cellCount);
 
-    // Jitter
+    // ジッターエフェクト
     if (jitterIntensity > 0.0) {
         float jitterTime = time * jitterSpeed;
         float jitterX = (random(vec2(cellCoord.y, floor(jitterTime))) - 0.5) * jitterIntensity * 2.0;
@@ -179,7 +203,7 @@ void main() {
         cellCoord += vec2(jitterX, jitterY);
     }
 
-    // RGB Glitch
+    // グリッチエフェクト
     if (glitchIntensity > 0.0 && glitchFrequency > 0.0) {
         float glitchTime = floor(time * glitchFrequency);
         float glitchRand = random(vec2(glitchTime, cellCoord.y));
@@ -205,10 +229,10 @@ void main() {
         finalColor = vec3(brightness * charValue);
     }
 
-    // Apply color palette
+    // カラーパレット適用
     finalColor = applyColorPalette(finalColor, colorPalette);
 
-    // Mouse glow
+    // マウスグローエフェクト
     if (mouseGlowEnabled) {
         vec2 pixelPos = uv * resolution;
         float dist = length(pixelPos - mousePos);
@@ -216,13 +240,13 @@ void main() {
         finalColor += glow;
     }
 
-    // Scanlines
+    // スキャンラインエフェクト
     if (scanlineIntensity > 0.0) {
         float scanline = sin(uv.y * scanlineCount * 3.14159) * 0.5 + 0.5;
         finalColor *= 1.0 - (scanline * scanlineIntensity);
     }
 
-    // Vignette
+    // ビネットエフェクト
     if (vignetteIntensity > 0.0) {
         vec2 centered = uv * 2.0 - 1.0;
         float vignette = 1.0 - dot(centered, centered) / vignetteRadius;
@@ -233,6 +257,7 @@ void main() {
 }
 `;
 
+    // 頂点シェーダー
     const asciiVertexShader = `
 varying vec2 vUv;
 void main() {
@@ -241,36 +266,36 @@ void main() {
 }
 `;
 
-    // Wait for DOM and Three.js to load
+    // DOMとThree.jsの読み込みを待機
     function init() {
         const container = document.getElementById('ascii-container');
         if (!container) {
-            console.error('ASCII Effect: Container #ascii-container not found');
+            console.error('ASCII Effect: #ascii-container が見つかりません');
             return;
         }
 
-        // Get dimensions
+        // サイズを取得
         const width = container.clientWidth;
         const height = container.clientHeight;
 
-        // Create scene
+        // シーンを作成
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(CONFIG.backgroundColor);
 
-        // Create camera
+        // カメラを作成
         const camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 1000);
         camera.position.z = 5;
 
-        // Create renderer
+        // レンダラーを作成
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(width, height);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
-        // Create render target for post-processing
+        // ポストプロセス用のレンダーターゲット
         const renderTarget = new THREE.WebGLRenderTarget(width, height);
 
-        // Lighting
+        // ライティング
         const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.5);
         scene.add(hemisphereLight);
 
@@ -282,7 +307,7 @@ void main() {
         directionalLight2.position.set(-5, 3, -5);
         scene.add(directionalLight2);
 
-        // Load GLB model
+        // GLBモデルを読み込み
         let loadedModel = null;
         const loader = new THREE.GLTFLoader();
         loader.load(
@@ -291,7 +316,7 @@ void main() {
                 loadedModel = gltf.scene;
                 loadedModel.scale.set(CONFIG.modelScale, CONFIG.modelScale, CONFIG.modelScale);
                 
-                // Apply color to all meshes in the model
+                // モデル内のすべてのメッシュに色を適用
                 loadedModel.traverse((child) => {
                     if (child.isMesh) {
                         child.material = new THREE.MeshStandardMaterial({
@@ -302,20 +327,20 @@ void main() {
                     }
                 });
                 
-                // Center the model
+                // モデルを中央に配置
                 const box = new THREE.Box3().setFromObject(loadedModel);
                 const center = box.getCenter(new THREE.Vector3());
                 loadedModel.position.sub(center);
                 
                 scene.add(loadedModel);
-                console.log('GLB model loaded successfully');
+                console.log('GLBモデル読み込み成功');
             },
             (progress) => {
-                console.log('Loading GLB:', (progress.loaded / progress.total * 100).toFixed(1) + '%');
+                console.log('GLB読み込み中:', (progress.loaded / progress.total * 100).toFixed(1) + '%');
             },
             (error) => {
-                console.error('Error loading GLB:', error);
-                // Fallback to torus knot if GLB fails to load
+                console.error('GLB読み込みエラー:', error);
+                // 読み込み失敗時はトーラスノットをフォールバックとして表示
                 const geometry = new THREE.TorusKnotGeometry(0.8, 0.3, 100, 16);
                 const material = new THREE.MeshStandardMaterial({
                     color: CONFIG.modelColor,
@@ -329,7 +354,7 @@ void main() {
             }
         );
 
-        // Create post-processing quad
+        // ポストプロセス用のクワッド
         const postScene = new THREE.Scene();
         const postCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
@@ -377,7 +402,7 @@ void main() {
         );
         postScene.add(postQuad);
 
-        // OrbitControls
+        // オービットコントロール（カメラ操作）
         let controls = null;
         if (typeof THREE.OrbitControls !== 'undefined') {
             controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -385,16 +410,16 @@ void main() {
             controls.enableZoom = true;
         }
 
-        // Mouse tracking
+        // マウス追跡
         let mouseX = 0, mouseY = 0;
         container.addEventListener('mousemove', (e) => {
             const rect = container.getBoundingClientRect();
             mouseX = e.clientX - rect.left;
-            mouseY = rect.height - (e.clientY - rect.top); // Flip Y for shader
+            mouseY = rect.height - (e.clientY - rect.top); // シェーダー用にY座標を反転
             asciiMaterial.uniforms.mousePos.value.set(mouseX, mouseY);
         });
 
-        // Handle resize
+        // リサイズ処理
         window.addEventListener('resize', () => {
             const newWidth = container.clientWidth;
             const newHeight = container.clientHeight;
@@ -407,7 +432,7 @@ void main() {
             asciiMaterial.uniforms.resolution.value.set(newWidth, newHeight);
         });
 
-        // Animation loop
+        // アニメーションループ
         const clock = new THREE.Clock();
         let deltaAccumulator = 0;
         let effectTime = 0;
@@ -418,7 +443,7 @@ void main() {
             const delta = clock.getDelta();
             const targetFPS = CONFIG.postfx.targetFPS;
 
-            // Handle frame rate limiting for effect
+            // フレームレート制限処理
             if (targetFPS > 0) {
                 const frameDuration = 1 / targetFPS;
                 deltaAccumulator += delta;
@@ -430,25 +455,25 @@ void main() {
                 effectTime += delta;
             }
 
-            // Update uniforms
+            // ユニフォーム更新
             asciiMaterial.uniforms.time.value = effectTime;
 
-            // Update controls
+            // コントロール更新
             if (controls) {
                 controls.update();
             }
 
-            // Rotate loaded model slowly
+            // モデルをゆっくり回転
             if (loadedModel) {
                 loadedModel.rotation.x += delta * 0.2;
                 loadedModel.rotation.y += delta * 0.3;
             }
 
-            // Render scene to render target
+            // シーンをレンダーターゲットに描画
             renderer.setRenderTarget(renderTarget);
             renderer.render(scene, camera);
 
-            // Render post-processed result to screen
+            // ポストプロセス結果を画面に描画
             renderer.setRenderTarget(null);
             renderer.render(postScene, postCamera);
         }
@@ -456,7 +481,7 @@ void main() {
         animate();
     }
 
-    // Initialize when DOM is ready
+    // DOM読み込み完了時に初期化
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', init);
     } else {
