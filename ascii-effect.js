@@ -12,8 +12,8 @@
         invert: false,
         colorMode: true,
         backgroundColor: 0xd9eb37,
-        modelColor: 0x94e3fe,
-        modelScale: 1,
+        modelColor: 0x00BFFF,
+        modelScale: 0.3,
         postfx: {
             scanlineIntensity: 0,
             scanlineCount: 100,
@@ -290,6 +290,17 @@ void main() {
             (gltf) => {
                 loadedModel = gltf.scene;
                 loadedModel.scale.set(CONFIG.modelScale, CONFIG.modelScale, CONFIG.modelScale);
+                
+                // Apply color to all meshes in the model
+                loadedModel.traverse((child) => {
+                    if (child.isMesh) {
+                        child.material = new THREE.MeshStandardMaterial({
+                            color: CONFIG.modelColor,
+                            roughness: 0.3,
+                            metalness: 0.1
+                        });
+                    }
+                });
                 
                 // Center the model
                 const box = new THREE.Box3().setFromObject(loadedModel);
