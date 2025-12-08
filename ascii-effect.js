@@ -13,7 +13,7 @@
         colorMode: true,
         backgroundColor: 0xd9eb37,
         modelColor: 0x00BFFF,
-        modelScale: 0.3,
+        modelScale: 0.1,
         postfx: {
             scanlineIntensity: 0,
             scanlineCount: 100,
