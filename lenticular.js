@@ -10,6 +10,8 @@
   let globalTiltAngle = 50;
   let animationId = null;
 
+  let permissionGranted = false;
+
   // Load Configuration
   async function loadConfig() {
     try {
@@ -38,6 +40,7 @@
 
     if (!isInitialized) {
       setupGlobalEvents();
+      setupPermissionHandler();
       animate();
       isInitialized = true;
     }
@@ -166,21 +169,61 @@
 
   // Global Events (Device Orientation)
   function setupGlobalEvents() {
-    if (window.DeviceOrientationEvent) {
-      // Check availability - basic check
+    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission !== 'function') {
+      // Android / Non-iOS 13+ (No permission needed)
       window.addEventListener("deviceorientation", handleOrientation);
     }
   }
 
+  function setupPermissionHandler() {
+    if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      // iOS 13+ requires user interaction
+      const btn = document.createElement('button');
+      btn.innerText = "ENABLE TILT CONTROL";
+      btn.className = "filter-btn";
+      btn.style.cssText = "position: fixed; bottom: 20px; right: 20px; z-index: 9999; background: rgba(0,0,0,0.8); border: 1px solid #ffff00; color: #ffff00;";
+      
+      btn.onclick = async () => {
+        try {
+          const response = await DeviceOrientationEvent.requestPermission();
+          if (response === 'granted') {
+            permissionGranted = true;
+            window.addEventListener("deviceorientation", handleOrientation);
+            btn.remove();
+          } else {
+            alert("Permission denied for tilt control");
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      document.body.appendChild(btn);
+      
+      // Auto-hide if already granted (not easily checkable without request, so we show button)
+      // Alternatively, bind to first touch on page
+      document.body.addEventListener('click', async () => {
+         if(!permissionGranted) {
+             // Try silent request or show button if needed. 
+             // Actually, explicit button is safer for iOS policy.
+         }
+      }, {once:true});
+    }
+  }
+
   function handleOrientation(event) {
-    if (event.beta === null) return;
+    // Gamma is left-to-right tilt (-90 to 90)
+    // We want to map roughly -30 to 30 degrees to 0-100%
+    const gamma = event.gamma;
+    if (gamma === null) return;
+    
     isDeviceOrientation = true;
 
-    // Beta is front-to-back tilt (-180 to 180)
-    // Mapping roughly 0 to 40 degrees for the effect
-    let beta = event.beta;
-    const clampedBeta = Math.max(0, Math.min(30, beta));
-    globalTiltAngle = (clampedBeta / 30) * 100;
+    // Map -30 to 30 => 0 to 100
+    // -30 => 0, 0 => 50, 30 => 100
+    let normalized = (gamma + 30) / 60; 
+    normalized = Math.max(0, Math.min(1, normalized));
+    
+    globalTiltAngle = normalized * 100;
   }
 
   // Animation Loop

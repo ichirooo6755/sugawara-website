@@ -349,5 +349,27 @@
     .meta-info {
         font-size: 0.65em;
         padding: 10px;
+        background: rgba(0,0,0,0.85); /* Darker background for readability */
+    }
+
+    /* Boost contrast for mobile */
+    .filter-btn {
+        background: rgba(0,0,0,0.4);
+        border-color: rgba(255,255,255,0.8);
+        color: #fff;
+    }
+    
+    .gallery-item {
+        border-color: rgba(255,255,255,0.6);
+    }
+    
+    /* Ensure title is readable if background is busy */
+    .hero-title {
+        text-shadow: 0 0 15px rgba(0,0,0,0.9);
+    }
+    
+    body {
+        /* Slightly darker tint on mobile for BG image contrast */
+        background-color: rgba(217, 235, 55, 0.2); 
     }
 }
