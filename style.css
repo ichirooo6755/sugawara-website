@@ -508,8 +508,8 @@ footer p {
   border-color: #ffff00;
 }
 .comment-post strong {
-  color: #d0ff00;
-  text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+  color: #00ffff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
 }
 
 /* フォーム入力欄 (枠線アニメーション) */
