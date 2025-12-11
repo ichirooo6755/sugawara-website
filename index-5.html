@@ -134,7 +134,7 @@
     </button>
     
     <div slot="progress-bar" class="w-full h-1 bg-white/20 absolute top-0">
-       <div class="h-full bg-cyan-400 transition-all duration-100" id="progress"></div>
+       <div class="h-full bg-yellow-400 transition-all duration-100" id="progress"></div>
     </div>
   </model-viewer>
 
@@ -157,8 +157,8 @@
       const model = viewer.model;
       if (model && model.materials) {
         model.materials.forEach(material => {
-          // Set to Cyan [R, G, B, A]
-          material.pbrMetallicRoughness.setBaseColorFactor([0.0, 1.0, 1.0, 1.0]);
+          // Set to Yellow [R, G, B, A]
+          material.pbrMetallicRoughness.setBaseColorFactor([1.0, 1.0, 0.0, 1.0]);
           material.pbrMetallicRoughness.setRoughnessFactor(0.2);
           material.pbrMetallicRoughness.setMetallicFactor(0.8);
         });
