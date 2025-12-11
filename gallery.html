@@ -7,6 +7,7 @@
     <title>SGWR Portfolio | Gallery</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="gallery.css" />
+    <link rel="stylesheet" href="lenticular.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@2.7.1/css/lightgallery.min.css" />
 </head>
 
@@ -39,12 +40,18 @@
         <div class="controls-wrapper">
             <div class="controls">
                 <button class="filter-btn active" data-filter="all">ALL PHOTOS</button>
+                <button class="filter-btn" data-filter="lenticular">LENTICULAR</button>
             </div>
         </div>
 
         <!-- Gallery Grid -->
         <div class="gallery" id="gallery">
             <!-- Gallery items will be loaded by JavaScript -->
+        </div>
+
+        <!-- Lenticular Container -->
+        <div id="lenticular-container">
+            <!-- Lenticular items will be loaded by JavaScript -->
         </div>
 
         <footer>
@@ -63,6 +70,9 @@
     <!-- Blueprint Script -->
     <script src="blueprint.js"></script>
     
+    <!-- Lenticular Script -->
+    <script src="lenticular.js"></script>
+
     <!-- Gallery Script -->
     <script src="gallery.js"></script>
 </body>

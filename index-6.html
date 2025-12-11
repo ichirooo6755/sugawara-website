@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>フォトレンチキュラー・ギャラリー</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            color: white;
+            padding-bottom: 100px; /* 下部の余白 */
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: 300;
+            margin: 30px 0;
+            text-align: center;
+            letter-spacing: 0.1em;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+
+        /* ギャラリーコンテナ */
+        #gallery-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+            align-items: center;
+        }
+
+        /* 個別のレンチキュラーセクション */
+        .lenticular-section {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            align-self: flex-start;
+            padding-left: 20px;
+            border-left: 3px solid #00d4ff;
+        }
+
+        .lenticular-container {
+            position: relative;
+            width: 100%;
+            /* アスペクト比を維持するための高さ設定はJSで行うか、padding-topハックを使う */
+            height: 60vh; 
+            max-height: 500px;
+            overflow: hidden;
+            box-shadow: 
+                0 10px 40px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.1);
+            cursor: ew-resize; /* 左右に動かせることを示すカーソル */
+            background: #000;
+        }
+
+        .lenticular-frame {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .photo-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            will-change: opacity;
+            /* transitionはJSで制御するためCSSでは設定しない、あるいは非常に短くする */
+        }
+
+        /* レンチキュラーのストライプオーバーレイ */
+        .lenticular-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.03) 0px,
+                rgba(255, 255, 255, 0.03) 1px,
+                transparent 1px,
+                transparent 4px
+            );
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        /* 光沢効果 */
+        .gloss-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                135deg,
+                rgba(255, 255, 255, 0.1) 0%,
+                transparent 50%,
+                rgba(0, 0, 0, 0.1) 100%
+            );
+            pointer-events: none;
+            z-index: 11;
+        }
+
+        .image-indicator {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 12px;
+            height: 10px;
+        }
+
+        .indicator-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transition: all 0.2s ease;
+        }
+
+        .indicator-dot.active {
+            background: #00d4ff;
+            transform: scale(1.5);
+            box-shadow: 0 0 8px #00d4ff;
+        }
+
+        /* コントロールパネル（画面下部固定） */
+        .control-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 24px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .status-text {
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        .permission-btn {
+            background: linear-gradient(135deg, #00d4ff, #0099ff);
+            border: none;
+            padding: 8px 20px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            white-space: nowrap;
+        }
+
+        .permission-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+        }
+
+        @media (max-width: 600px) {
+            .lenticular-container {
+                height: 50vh;
+            }
+            .title {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1 class="title">LENTICULAR GALLERY</h1>
+    
+    <div id="gallery-container">
+        <!-- JSでここにレンチキュラーコンテンツが生成されます -->
+    </div>
+
+    <div class="control-panel">
+        <span id="statusText" class="status-text">読み込み中...</span>
+        <button id="permissionBtn" class="permission-btn" style="display: none;">センサー有効化</button>
+    </div>
+
+    <script>
+        // ==========================================
+        // 設定エリア：ここにフォルダ（アルバム）を追加します
+        // ==========================================
+        const albums = [
+            {
+                id: 'nature_v1',
+                title: 'NATURE COLLECTION',
+                description: 'Beautiful landscapes from around the world',
+                // フォルダ内の画像リストをここに定義
+                images: [
+                    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&fit=crop',
+                    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&fit=crop',
+                    'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=800&fit=crop',
+                    'https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=800&fit=crop'
+                ]
+            },
+            {
+                id: 'city_v1',
+                title: 'URBAN ARCHITECTURE',
+                description: 'Modern cityscapes and structures',
+                images: [
+                    'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&fit=crop',
+                    'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=800&fit=crop',
+                    'https://images.unsplash.com/photo-1449824913929-4bdd6263a6f9?w=800&fit=crop'
+                ]
+            },
+            {
+                id: 'abstract_v1',
+                title: 'NEON ABSTRACT',
+                description: 'Vibrant colors and light',
+                images: [
+                    'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=800&fit=crop',
+                    'https://images.unsplash.com/photo-1550684847-75bdda21cc95?w=800&fit=crop',
+                    'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=800&fit=crop',
+                    'https://images.unsplash.com/photo-1544441893-675973e31985?w=800&fit=crop',
+                    'https://images.unsplash.com/photo-1535295972055-1c762f4483e5?w=800&fit=crop'
+                ]
+            }
+        ];
+
+        // ==========================================
+        // アプリケーションロジック
+        // ==========================================
+        
+        const galleryContainer = document.getElementById('gallery-container');
+        const statusText = document.getElementById('statusText');
+        const permissionBtn = document.getElementById('permissionBtn');
+
+        // グローバル状態
+        let isDeviceOrientation = false;
+        let globalTiltAngle = 50; // 0-100
+        const lenticularInstances = []; // 生成されたインスタンスの管理用
+
+        // DOM生成関数
+        function renderAlbums() {
+            albums.forEach(album => {
+                // セクション作成
+                const section = document.createElement('div');
+                section.className = 'lenticular-section';
+                
+                // タイトル
+                const title = document.createElement('div');
+                title.className = 'section-title';
+                title.innerHTML = `<strong>${album.title}</strong> <span style="font-size:0.8em; opacity:0.7">(${album.images.length} images)</span>`;
+                section.appendChild(title);
+
+                // コンテナ
+                const container = document.createElement('div');
+                container.className = 'lenticular-container';
+                container.id = `container-${album.id}`;
+                
+                // フレーム
+                const frame = document.createElement('div');
+                frame.className = 'lenticular-frame';
+                
+                // 画像レイヤー
+                const layers = [];
+                album.images.forEach((src, idx) => {
+                    const layer = document.createElement('div');
+                    layer.className = 'photo-layer';
+                    layer.style.backgroundImage = `url(${src})`;
+                    layer.style.zIndex = idx + 1;
+                    layer.style.opacity = idx === 0 ? 1 : 0;
+                    frame.appendChild(layer);
+                    layers.push(layer);
+                });
+
+                // オーバーレイ
+                const overlay = document.createElement('div');
+                overlay.className = 'lenticular-overlay';
+                
+                const gloss = document.createElement('div');
+                gloss.className = 'gloss-overlay';
+
+                container.appendChild(frame);
+                container.appendChild(overlay);
+                container.appendChild(gloss);
+                section.appendChild(container);
+
+                // インジケーター
+                const indicator = document.createElement('div');
+                indicator.className = 'image-indicator';
+                const dots = [];
+                album.images.forEach((_, idx) => {
+                    const dot = document.createElement('div');
+                    dot.className = `indicator-dot ${idx === 0 ? 'active' : ''}`;
+                    indicator.appendChild(dot);
+                    dots.push(dot);
+                });
+                section.appendChild(indicator);
+
+                galleryContainer.appendChild(section);
+
+                // インスタンスデータ保存
+                lenticularInstances.push({
+                    id: album.id,
+                    container: container,
+                    layers: layers,
+                    dots: dots,
+                    numImages: album.images.length,
+                    currentAngle: 50, // 0-100
+                    targetAngle: 50   // 0-100
+                });
+
+                // 個別マウスイベント（PC用）
+                container.addEventListener('mousemove', (e) => {
+                    if (isDeviceOrientation) return;
+                    
+                    const rect = container.getBoundingClientRect();
+                    // コンテナ内のX位置 (0.0 - 1.0)
+                    const relativeX = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                    
+                    // ターゲット角度を更新 (0-100)
+                    const instance = lenticularInstances.find(inst => inst.id === album.id);
+                    if (instance) {
+                        instance.targetAngle = relativeX * 100;
+                    }
+                });
+
+                // タッチイベント（タッチデバイスでのスワイプ用）
+                container.addEventListener('touchmove', (e) => {
+                    if (isDeviceOrientation) return;
+                    // スクロールをブロックしないように注意が必要だが、
+                    // ここでは左右の動きを検知したい。
+                    // しかし縦スクロールの邪魔になるので、本来はスクロール判定が必要。
+                    // 簡易的に実装：
+                    const touch = e.touches[0];
+                    const rect = container.getBoundingClientRect();
+                    const relativeX = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+                    
+                    const instance = lenticularInstances.find(inst => inst.id === album.id);
+                    if (instance) {
+                        instance.targetAngle = relativeX * 100;
+                    }
+                }, { passive: true });
+                
+                // マウスリーブで中央に戻す（オプション）
+                container.addEventListener('mouseleave', () => {
+                    if (isDeviceOrientation) return;
+                    const instance = lenticularInstances.find(inst => inst.id === album.id);
+                    if (instance) {
+                         // instance.targetAngle = 50; // 戻さない方が写真を見やすい
+                    }
+                });
+            });
+        }
+
+        // 線形補間
+        function lerp(start, end, factor) {
+            return start + (end - start) * factor;
+        }
+
+        // アニメーションループ
+        function animate() {
+            lenticularInstances.forEach(instance => {
+                // スマホの傾きモードなら、グローバルな傾きを使用
+                if (isDeviceOrientation) {
+                    instance.targetAngle = globalTiltAngle;
+                }
+
+                // 現在の角度をターゲットに近づける（スムーズな動き）
+                instance.currentAngle = lerp(instance.currentAngle, instance.targetAngle, 0.15);
+                
+                const normalizedAngle = instance.currentAngle; // 0-100
+                
+                // 画像切り替えロジック
+                const segment = 100 / instance.numImages;
+                
+                instance.layers.forEach((layer, index) => {
+                    const segmentStart = index * segment;
+                    const segmentEnd = (index + 1) * segment;
+                    const segmentCenter = (segmentStart + segmentEnd) / 2;
+                    
+                    let opacity = 0;
+                    
+                    if (normalizedAngle >= segmentStart && normalizedAngle < segmentEnd) {
+                        // メイン表示範囲
+                        const distFromCenter = Math.abs(normalizedAngle - segmentCenter);
+                        // 中心に近いほど不透明度が高い
+                        opacity = 1 - (distFromCenter / (segment / 1.5)) * 0.5;
+                    } else {
+                        // 隣接セグメントからの重なり
+                        const distToSegment = Math.min(
+                            Math.abs(normalizedAngle - segmentStart),
+                            Math.abs(normalizedAngle - segmentEnd)
+                        );
+                        // 重なり範囲を広めにとってブレンドさせる
+                        if (distToSegment < segment * 0.8) {
+                            opacity = (1 - distToSegment / (segment * 0.8)) * 0.8;
+                        }
+                    }
+                    
+                    // コントラストを高めるための調整
+                    opacity = Math.pow(opacity, 1.2); 
+                    
+                    layer.style.opacity = Math.max(0, Math.min(1, opacity));
+                });
+
+                // インジケーター更新
+                const activeIndex = Math.min(
+                    Math.floor(normalizedAngle / segment),
+                    instance.numImages - 1
+                );
+                
+                instance.dots.forEach((dot, idx) => {
+                    dot.classList.toggle('active', idx === activeIndex);
+                });
+            });
+
+            requestAnimationFrame(animate);
+        }
+
+        // デバイスの向きハンドラ
+        function handleOrientation(event) {
+            isDeviceOrientation = true;
+            // beta: 前後の傾き (-180 to 180)
+            let beta = event.beta || 0;
+            
+            // 0° 〜 +12° の範囲を 0-100 にマッピング
+            // 補正: スマホを持つ角度（約45度）を基準にする場合もあるが、
+            // ここでは「垂直から少し手前に倒した状態」や「机に置いた状態」などバリエーションがある。
+            // ユーザーフィードバックに合わせて「少しの傾き」で反応するようにする。
+            
+            // 基準値を少し調整（持ち手によって変わるため、相対変化の方が良いが、簡易実装として絶対値を使う）
+            // 0度（垂直）〜 12度（少し手前に倒す）
+            // あるいは、初期位置からの差分をとるのがベストだが、ここではシンプルに。
+            
+            // 範囲制限: 0〜12度
+            const clampedBeta = Math.max(0, Math.min(12, beta));
+            globalTiltAngle = (clampedBeta / 12) * 100;
+            
+            statusText.textContent = `📱 傾き検知中: ${Math.round(beta)}°`;
+        }
+
+        // 許可リクエスト
+        async function requestPermission() {
+            if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                try {
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    if (permission === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation);
+                        permissionBtn.style.display = 'none';
+                        statusText.textContent = '📱 スマホを前後に傾けてください';
+                    } else {
+                        statusText.textContent = '許可が拒否されました';
+                    }
+                } catch (error) {
+                    console.error(error);
+                    statusText.textContent = 'エラーが発生しました';
+                }
+            }
+        }
+
+        // 初期化
+        function init() {
+            renderAlbums();
+            animate();
+
+            if (window.DeviceOrientationEvent) {
+                if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+                    // iOS 13+
+                    permissionBtn.style.display = 'block';
+                    permissionBtn.addEventListener('click', requestPermission);
+                    statusText.textContent = 'センサーを有効にしてください';
+                } else {
+                    // Android / 古いiOS
+                    window.addEventListener('deviceorientation', handleOrientation);
+                    
+                    // 実際にイベントが発火するか確認（PCでDeviceOrientationEventが存在する場合があるため）
+                    let eventTimer = setTimeout(() => {
+                        if (!isDeviceOrientation) {
+                            statusText.textContent = '🖱️ 写真の上でマウスを左右に動かしてください';
+                        }
+                    }, 1000);
+                    
+                    window.addEventListener('deviceorientation', (e) => {
+                        if(e.beta !== null) clearTimeout(eventTimer);
+                    }, { once: true });
+                }
+            } else {
+                statusText.textContent = '🖱️ 写真の上でマウスを左右に動かしてください';
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

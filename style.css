@@ -1,10 +1,8 @@
-
-
 /* Google Fonts - OCR */
 @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap");
 
 :root {
-  --blueprint-blue: #b6bc0f;
+  --blueprint-blue: #d9eb37;
   --blueprint-text: #fff;
   --crt-scanline-dark: rgba(0, 0, 0, 0.25);
   --grid-color: rgba(255, 255, 255, 0.4);
@@ -216,7 +214,7 @@ nav,
   padding: 20px;
   border: 2px solid var(--blueprint-text);
   margin: 20px 0;
-  background: rgba(15, 117, 188, 0.8);
+  background: rgba(217, 235, 55, 0.8);
 }
 
 .comment-section h2 {
@@ -292,8 +290,8 @@ nav,
 }
 
 #comment-list li strong {
-  color: #00ffff;
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  color: #ffff00;
+  text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
 }
 
 /* ========== Footer ========== */
@@ -449,7 +447,8 @@ footer p {
   opacity: 0;
   position: relative;
   z-index: 2;
-  transition: color 0.1s, text-shadow 0.1s, background-color 0.1s, border-color 0.1s;
+  transition: color 0.1s, text-shadow 0.1s, background-color 0.1s,
+    border-color 0.1s;
 }
 
 /* =======================================
@@ -472,9 +471,9 @@ footer p {
 .block-red-pre {
 }
 .block-red-post {
-  background-color: #00aaff;
+  background-color: #e6e600;
   color: #fff;
-  text-shadow: 0 0 10px rgba(0, 170, 255, 0.8);
+  text-shadow: 0 0 10px rgba(230, 230, 0, 0.8);
 }
 
 /* --- テキスト要素 (1文字ずつ表示) --- */
@@ -488,7 +487,7 @@ footer p {
 }
 .text-yellow-post {
   color: #aeff00;
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  text-shadow: 0 0 10px rgba(174, 255, 0, 0.5);
 }
 .text-gray-pre {
 }
@@ -499,18 +498,18 @@ footer p {
 /* コメント要素 (枠線アニメーション + 1文字ずつ表示) */
 .comment-pre {
   color: transparent;
-  border-color: rgba(0, 255, 255, 0.3);
+  border-color: rgba(255, 255, 0, 0.3);
 }
 .comment-pre strong {
   color: transparent;
 }
 .comment-post {
   color: #fff;
-  border-color: #00ffff;
+  border-color: #ffff00;
 }
 .comment-post strong {
   color: #d0ff00;
-  text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+  text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
 }
 
 /* フォーム入力欄 (枠線アニメーション) */
@@ -582,7 +581,7 @@ footer p {
 
 /* ========== LightGallery Overrides ========== */
 .lg-backdrop {
-  background-color: rgba(15, 117, 188, 0.95) !important;
+  background-color: rgba(217, 235, 55, 0.95) !important;
 }
 
 .lg-toolbar {

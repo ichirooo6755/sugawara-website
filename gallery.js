@@ -191,14 +191,33 @@ document.querySelectorAll(".filter-btn").forEach(btn => {
         document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
         const filter = btn.dataset.filter;
-        const activeSortEl = document.querySelector(".control-btn.active");
-        const sort = activeSortEl ? activeSortEl.dataset.sort : null;
 
-        let arr = [...photos];
-        if (filter && filter !== "all") arr = arr.filter(p => p.category === filter);
-        if (sort === "asc") arr.sort((a, b) => a.file.localeCompare(b.file));
-        if (sort === "desc") arr.sort((a, b) => b.file.localeCompare(a.file));
+        const galleryGrid = document.getElementById('gallery');
+        const lenticularContainer = document.getElementById('lenticular-container');
 
-        buildGallery(arr);
+        if (filter === 'lenticular') {
+            // Switch to Lenticular View
+            galleryGrid.style.display = 'none';
+            lenticularContainer.classList.add('active');
+            
+            // Initialize if needed
+            if (window.initLenticularGallery) {
+                window.initLenticularGallery('lenticular-container');
+            }
+        } else {
+            // Switch to Standard Gallery View
+            galleryGrid.style.display = 'grid'; // Restore grid display
+            lenticularContainer.classList.remove('active');
+            
+            const activeSortEl = document.querySelector(".control-btn.active");
+            const sort = activeSortEl ? activeSortEl.dataset.sort : null;
+
+            let arr = [...photos];
+            if (filter && filter !== "all") arr = arr.filter(p => p.category === filter);
+            if (sort === "asc") arr.sort((a, b) => a.file.localeCompare(b.file));
+            if (sort === "desc") arr.sort((a, b) => b.file.localeCompare(a.file));
+
+            buildGallery(arr);
+        }
     });
 });

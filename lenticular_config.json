@@ -1,0 +1,38 @@
+[
+  {
+    "id": "nature_v1",
+    "title": "NATURE COLLECTION",
+    "description": "Beautiful landscapes from around the world",
+    "folder": "lenticular/sample1",
+    "images": [
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&fit=crop",
+      "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=800&fit=crop",
+      "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=800&fit=crop",
+      "https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=800&fit=crop"
+    ]
+  },
+  {
+    "id": "city_v1",
+    "title": "URBAN ARCHITECTURE",
+    "description": "Modern cityscapes and structures",
+    "folder": "lenticular/sample2",
+    "images": [
+      "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&fit=crop",
+      "https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=800&fit=crop",
+      "https://images.unsplash.com/photo-1449824913929-4bdd6263a6f9?w=800&fit=crop"
+    ]
+  },
+  {
+    "id": "abstract_v1",
+    "title": "NEON ABSTRACT",
+    "description": "Vibrant colors and light",
+    "folder": "lenticular/sample3",
+    "images": [
+      "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=800&fit=crop",
+      "https://images.unsplash.com/photo-1550684847-75bdda21cc95?w=800&fit=crop",
+      "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=800&fit=crop",
+      "https://images.unsplash.com/photo-1544441893-675973e31985?w=800&fit=crop",
+      "https://images.unsplash.com/photo-1535295972055-1c762f4483e5?w=800&fit=crop"
+    ]
+  }
+]
