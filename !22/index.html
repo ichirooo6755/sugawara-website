@@ -130,50 +130,64 @@
         }
       }
 
-      /* ========== Navigation ========== */
-      .nav-panel {
-        position: fixed;
-        top: 1rem;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 100;
-      }
-
-      .nav-content {
+      /* ========== Navigation Standard ========== */
+      nav {
         display: flex;
+        justify-content: space-between;
         align-items: center;
-        gap: 1.5rem;
-        padding: 0.75rem 1.5rem;
-        border-radius: 50px;
+        padding: 2.5rem 5%;
+        position: fixed;
+        width: 100%;
+        top: 0;
+        z-index: 200;
+        pointer-events: none; /* Allow clickthrough for layout, enable for children */
+      }
+      
+      nav * {
+        pointer-events: auto;
       }
 
-      .nav-title {
-        font-size: 0.9rem;
+      .nav-left {
+        font-family: "Orbitron", sans-serif;
         font-weight: 700;
-        letter-spacing: 3px;
+        letter-spacing: 2px;
+        font-size: 1.2rem;
         text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
       }
 
       .nav-links {
         display: flex;
-        gap: 1rem;
+        gap: 2rem;
       }
 
       .nav-links a {
         color: #fff;
         text-decoration: none;
-        font-size: 0.75rem;
+        font-size: 0.9rem;
         letter-spacing: 2px;
-        padding: 0.5rem 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 20px;
-        transition: all 0.3s;
+        transition: color 0.3s, text-shadow 0.3s;
+        position: relative;
+        padding: 5px 10px;
+      }
+
+      .nav-links a::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: #ffff00;
+        transition: width 0.3s ease;
       }
 
       .nav-links a:hover {
-        background: #fff;
-        color: #d9eb37;
-        box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+        color: #ffff00;
+        text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+      }
+
+      .nav-links a:hover::after {
+        width: 100%;
       }
 
       .btn-blueprint {
@@ -237,14 +251,20 @@
     <div class="scan-line"></div>
     <div class="scan-line scan-line-wide"></div>
 
-    <!-- Navigation Panel -->
+    <!-- Navigation Bar -->
+    <nav>
+      <div class="nav-left">SGWR PORTFOLIO</div>
+      <div class="nav-links">
+        <a href="../index.html">Home</a>
+        <a href="../gallery.html">Gallery</a>
+        <a href="#" class="active" style="color:#ffff00;">3D Control</a>
+      </div>
+    </nav>
+
+    <!-- Control Panel (Centered) -->
     <div class="nav-panel">
-      <div class="blueprint-panel nav-content">
+      <div class="blueprint-panel nav-content" style="flex-direction: column; gap: 10px; padding: 20px;">
         <span class="nav-title">3D HAND CONTROL</span>
-        <div class="nav-links">
-          <a href="../index.html">HOME</a>
-          <a href="../gallery.html">GALLERY</a>
-        </div>
         <label for="modelFile" class="btn-blueprint" style="color: #ffff00; border-color: #ffff00;">
           <svg
             class="w-4 h-4"
