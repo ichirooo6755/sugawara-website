@@ -1374,10 +1374,18 @@
         requestAnimationFrame(loop);
       }
 
-      // Init
-      initThree();
-      buildAllShapes();
-      initFaceMesh();
+      // Init with error handling
+      try {
+        initThree();
+        buildAllShapes();
+        try {
+          initFaceMesh();
+        } catch(e) {
+          console.error("FaceMesh init failed:", e);
+        }
+      } catch(e) {
+        console.error("Init failed:", e);
+      }
 
       // Auto-load default model
       loadModelUrl("./model.glb");
@@ -1386,16 +1394,6 @@
       startHands();
       loop();
       
-      // Event listeners
-      // AR Button removed from overlay, added to nav or optional?
-      // Keeping internal logic clean.
-      
-      /*
-      // Removed overlay to restore default model view immediately
-      const startOverlay = document.createElement("div");
-      ...
-      */
-
       // Event listeners
       modelFileInput.addEventListener("change", (e) =>
         loadModelFile(e.target.files[0])
