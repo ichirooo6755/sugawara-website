@@ -356,6 +356,36 @@
       "
     ></canvas>
 
+    <!-- Loading Overlay -->
+    <div
+      id="loading-overlay"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #d9eb37;
+        z-index: 250;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        font-family: 'Orbitron', monospace;
+        color: #fff;
+      "
+    >
+      <h1 style="font-size: 2rem; letter-spacing: 5px; margin-bottom: 20px">
+        3D HAND CONTROL
+      </h1>
+      <div style="width: 200px; height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px; overflow: hidden;">
+        <div id="loading-bar" style="width: 0%; height: 100%; background: #ffff00; transition: width 0.3s;"></div>
+      </div>
+      <p id="loading-status" style="font-size: 0.9rem; color: #ffff00; margin-top: 20px; letter-spacing: 2px;">
+        LOADING MODEL...
+      </p>
+    </div>
+
     <!-- Calibration Overlay -->
     <div
       id="calibration-overlay"
@@ -367,7 +397,7 @@
         height: 100vh;
         background: rgba(217, 235, 55, 0.95);
         z-index: 200;
-        display: flex;
+        display: none;
         flex-direction: column;
         align-items: center;
         justify-content: center;
@@ -1144,9 +1174,16 @@
       }
 
       function loadModelUrl(url, revokeAfterLoad = false) {
+        const loadingOverlay = document.getElementById("loading-overlay");
+        const loadingBar = document.getElementById("loading-bar");
+        const loadingStatus = document.getElementById("loading-status");
+        const calibrationOverlay = document.getElementById("calibration-overlay");
+        
         try {
           const loader = new GLTFLoader();
           statusEl.textContent = "LOADING MODEL…";
+          if (loadingStatus) loadingStatus.textContent = "LOADING MODEL...";
+          
           loader.load(
             url,
             (gltf) => {
@@ -1157,12 +1194,24 @@
               particlePoints.visible = false;
               modelGroup.visible = true;
               statusEl.textContent = "MODEL LOADED — USE HANDS TO CONTROL";
+              
+              // Hide loading, show calibration
+              if (loadingOverlay) loadingOverlay.style.display = "none";
+              if (calibrationOverlay) calibrationOverlay.style.display = "flex";
             },
-            undefined,
+            (progress) => {
+              // Progress callback
+              if (progress.lengthComputable && loadingBar) {
+                const percent = (progress.loaded / progress.total) * 100;
+                loadingBar.style.width = percent + "%";
+                if (loadingStatus) loadingStatus.textContent = `LOADING... ${Math.round(percent)}%`;
+              }
+            },
             (err) => {
               console.error(err);
               if (revokeAfterLoad) URL.revokeObjectURL(url);
               statusEl.textContent = "MODEL LOAD FAILED";
+              if (loadingStatus) loadingStatus.textContent = "LOAD FAILED";
             }
           );
         } catch (e) {
