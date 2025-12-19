@@ -101,6 +101,11 @@
     background-size: cover;
     background-position: center;
     will-change: opacity;
+    opacity: 0.04;
+    border-color: rgba(0, 0, 0, 0);
+    background-color: unset;
+    border-image: none;
+    background: unset;
 }
 
 /* Effects */

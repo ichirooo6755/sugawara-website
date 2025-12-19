@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#020617" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>疑似カメラ操作（F値 / シャッター / ISO）- Webフロントエンドのみ</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <style>
+    /* Mobile friendliness */
+    :root {
+      --safe-top: env(safe-area-inset-top);
+      --safe-right: env(safe-area-inset-right);
+      --safe-bottom: env(safe-area-inset-bottom);
+      --safe-left: env(safe-area-inset-left);
+    }
+    body { min-height: 100dvh; overscroll-behavior: none; }
+    * { -webkit-tap-highlight-color: transparent; }
+
+    /* Small helpers for range */
+    input[type="range"] { width: 100%; }
+    .mono { font-variant-numeric: tabular-nums; }
+
+    /* Prevent page scroll/zoom interference while tapping the preview */
+    #view { touch-action: none; }
+
+    /* Avoid iOS focus zoom on selects */
+    select { font-size: 16px; }
+
+    /* Pseudo fullscreen fallback */
+    body.pseudo-fs header,
+    body.pseudo-fs aside,
+    body.pseudo-fs #helpDetails { display: none; }
+
+    body.pseudo-fs main {
+      max-width: none !important;
+      padding: 0 !important;
+    }
+
+    body.pseudo-fs #previewCard {
+      border-radius: 0 !important;
+      border: none !important;
+      padding: 0 !important;
+      background: #000 !important;
+    }
+
+    body.pseudo-fs #viewWrap {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      background: #000;
+      display: grid;
+      place-items: center;
+      padding-top: var(--safe-top);
+      padding-right: var(--safe-right);
+      padding-bottom: var(--safe-bottom);
+      padding-left: var(--safe-left);
+    }
+
+    body.pseudo-fs #view {
+      width: 100vw;
+      height: auto;
+      max-height: 100vh;
+      border-radius: 0 !important;
+      background: #000;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 text-slate-100">
+  <header class="sticky top-0 z-10 border-b border-slate-800 bg-slate-950/80 backdrop-blur" style="padding-top: var(--safe-top)">
+    <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-3" style="padding-left: max(1rem, var(--safe-left)); padding-right: max(1rem, var(--safe-right));">
+      <div>
+        <h1 class="text-lg md:text-xl font-semibold tracking-tight">疑似カメラ操作（F値 / シャッター / ISO）</h1>
+        <p class="text-xs md:text-sm text-slate-300">Webフロントエンドのみ：リアルタイム映像をCanvasで後処理して「それっぽく」見せます（光学操作ではありません）。</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span id="supportBadge" class="text-xs px-2 py-1 rounded border border-slate-700 text-slate-200 bg-slate-900">FaceDetector: 判定中…</span>
+        <span id="fpsBadge" class="mono text-xs px-2 py-1 rounded border border-slate-700 text-slate-200 bg-slate-900">FPS: --</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Fullscreen overlay controls (works for native FS and pseudo-FS) -->
+  <div id="fsOverlay" class="hidden fixed inset-x-0 top-0 z-[60] px-3 py-2 flex items-center justify-between gap-2 bg-slate-950/60 backdrop-blur border-b border-slate-800" style="padding-top: calc(0.5rem + var(--safe-top)); padding-left: max(0.75rem, var(--safe-left)); padding-right: max(0.75rem, var(--safe-right));">
+    <div class="flex items-center gap-2">
+      <button id="btnExitFS" class="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium">戻る</button>
+      <span class="text-xs text-slate-200/90" id="fsStatus">プレビュー</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btnStopFS" class="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium">停止</button>
+      <button id="btnShotFS" class="px-3 py-2 rounded-md bg-emerald-500 hover:bg-emerald-400 text-white font-medium">保存/共有</button>
+    </div>
+  </div>
+
+  <main class="mx-auto max-w-6xl px-4 py-5 grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-5" style="padding-left: max(1rem, var(--safe-left)); padding-right: max(1rem, var(--safe-right)); padding-bottom: max(1rem, var(--safe-bottom));">
+    <!-- Preview -->
+    <section class="space-y-3">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btnStart" class="px-3 py-2 rounded-md bg-indigo-500 hover:bg-indigo-400 text-white font-medium">カメラ開始</button>
+          <button id="btnStop" class="px-3 py-2 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium" disabled>停止</button>
+          <button id="btnShot" class="px-3 py-2 rounded-md bg-emerald-500 hover:bg-emerald-400 text-white font-medium" disabled>保存/共有</button>
+          <button id="btnFS" class="px-3 py-2 rounded-md bg-slate-900 hover:bg-slate-800 text-slate-100 font-medium">全画面</button>
+        </div>
+        <div class="text-xs text-slate-300">
+          <span id="statusText">未開始</span>
+        </div>
+      </div>
+
+      <div id="previewCard" class="rounded-xl border border-slate-800 bg-slate-900/40 p-3">
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <div class="text-sm text-slate-200">プレビュー（タップでピント位置：顔検出OFF時）</div>
+          <div class="text-xs text-slate-400 mono" id="dimsText">-- × --</div>
+        </div>
+        <div id="viewWrap" class="relative">
+          <canvas id="view" class="w-full h-auto max-h-[65dvh] rounded-lg bg-black"></canvas>
+          <div id="tapHint" class="pointer-events-none absolute inset-x-2 bottom-2 text-xs text-slate-200/90 bg-slate-950/50 border border-slate-800 rounded px-2 py-1 hidden">
+            画面タップでピント中心を移動できます（顔検出OFF）。
+          </div>
+        </div>
+        <div class="mt-2 text-xs text-slate-400 leading-relaxed">
+          <div>注意：これは擬似表現です。髪/輪郭/透明物体などでは破綻しやすく、精度より「雰囲気重視」です。</div>
+          <div>要件：HTTPS または localhost で実行してください（getUserMedia制約）。</div>
+        </div>
+      </div>
+
+      <details id="helpDetails" class="rounded-xl border border-slate-800 bg-slate-900/40 p-3">
+        <summary class="cursor-pointer text-sm text-slate-200">このデモがやっていること（簡易フロー）</summary>
+        <ol class="mt-2 list-decimal pl-5 text-sm text-slate-300 space-y-1">
+          <li>カメラを取得 → 直接表示せずCanvasに毎フレーム描画</li>
+          <li>疑似距離（=マスク）を生成：顔検出（対応ブラウザ）またはタップ位置を中心に「近い=シャープ」を作る</li>
+          <li>元画像と全体ぼかし画像（ガウス相当：Canvas filter blur）を常に用意</li>
+          <li>マスクで合成：近い領域は元画像、遠い領域はぼかし画像（=疑似F値）</li>
+          <li>時間方向に合成して残像を作る（=疑似シャッタースピード）</li>
+          <li>明るさ補正＋ノイズを追加（=疑似ISO）</li>
+        </ol>
+      </details>
+    </section>
+
+    <!-- Controls -->
+    <aside class="space-y-4">
+      <section class="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">入力 / 推定</h2>
+
+        <div class="mt-3 grid gap-3">
+          <label class="grid gap-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-300">カメラ</span>
+              <span class="text-xs text-slate-400">前面/背面</span>
+            </div>
+            <select id="selFacing" class="rounded-md bg-slate-950 border border-slate-800 px-2 py-2 text-slate-100">
+              <option value="user" selected>内側（自撮り）</option>
+              <option value="environment">外側（背面）</option>
+            </select>
+          </label>
+
+          <label class="grid gap-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-300">解像度</span>
+              <span class="text-xs text-slate-400">高いほど重い</span>
+            </div>
+            <select id="selRes" class="rounded-md bg-slate-950 border border-slate-800 px-2 py-2 text-slate-100">
+              <option value="320x240">低 (320×240)</option>
+              <option value="640x480" selected>中 (640×480)</option>
+              <option value="1280x720">高 (1280×720)</option>
+            </select>
+          </label>
+
+          <label class="flex items-center justify-between gap-3">
+            <span class="text-xs text-slate-300">省電力モード（スマホ推奨）</span>
+            <input id="chkLowPower" type="checkbox" class="h-4 w-4" />
+          </label>
+
+          <label class="flex items-center justify-between gap-3">
+            <span class="text-xs text-slate-300">顔検出で被写体推定（対応ブラウザのみ）</span>
+            <input id="chkFace" type="checkbox" class="h-4 w-4" checked />
+          </label>
+
+          <label class="flex items-center justify-between gap-3">
+            <span class="text-xs text-slate-300">デバッグ：マスク表示</span>
+            <input id="chkDebug" type="checkbox" class="h-4 w-4" />
+          </label>
+
+          <div class="text-xs text-slate-400 leading-relaxed">
+            スマホで重い場合は、解像度を「低」＋省電力モードをONにしてください。
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">疑似F値（被写界深度）</h2>
+
+        <div class="mt-3 grid gap-4">
+          <label class="grid gap-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-300">F値っぽさ（小さいほど背景ボケ大）</span>
+              <span class="text-xs text-slate-200 mono" id="lblF">f/2.0</span>
+            </div>
+            <input id="rngF" type="range" min="1.4" max="16" step="0.1" value="2.0" />
+          </label>
+
+          <label class="grid gap-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-300">ピント範囲（広いほど全体がシャープ）</span>
+              <span class="text-xs text-slate-200 mono" id="lblFocus">0.45</span>
+            </div>
+            <input id="rngFocus" type="range" min="0.15" max="1.0" step="0.01" value="0.45" />
+          </label>
+
+          <label class="grid gap-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-300">境界なじみ（輪郭の不自然さを軽減）</span>
+              <span class="text-xs text-slate-200 mono" id="lblFeather">0.55</span>
+            </div>
+            <input id="rngFeather" type="range" min="0.05" max="1.0" step="0.01" value="0.55" />
+          </label>
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">疑似シャッタースピード（残像/モーションブラー）</h2>
+
+        <div class="mt-3 grid gap-4">
+          <label class="grid gap-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-300">シャッター（速い=残像なし / 遅い=残像強）</span>
+              <span class="text-xs text-slate-200 mono" id="lblShutter">1/250 相当</span>
+            </div>
+            <input id="rngShutter" type="range" min="0" max="1" step="0.001" value="0.72" />
+          </label>
+
+          <div class="text-xs text-slate-400 leading-relaxed">
+            長秒露光の「動くものがブレる」感じを、時間方向のブレンドで近似しています（精密な動きベクトル推定は未実装）。
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">疑似ISO（明るさ / ノイズ）</h2>
+
+        <div class="mt-3 grid gap-4">
+          <label class="grid gap-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-300">ISO</span>
+              <span class="text-xs text-slate-200 mono" id="lblISO">ISO 400</span>
+            </div>
+            <input id="rngISO" type="range" min="100" max="6400" step="10" value="400" />
+          </label>
+
+          <label class="grid gap-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-300">露出補正（疑似）</span>
+              <span class="text-xs text-slate-200 mono" id="lblEV">+0.0 EV</span>
+            </div>
+            <input id="rngEV" type="range" min="-2" max="2" step="0.1" value="0" />
+          </label>
+
+          <label class="grid gap-1">
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-slate-300">ノイズ量（ISO連動に追加）</span>
+              <span class="text-xs text-slate-200 mono" id="lblNoise">0.20</span>
+            </div>
+            <input id="rngNoise" type="range" min="0" max="1" step="0.01" value="0.20" />
+          </label>
+
+          <div class="text-xs text-slate-400 leading-relaxed">
+            明るさはCanvasのbrightnessで、ノイズは疑似フィルムグレインを重ねて表現します。
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+        <h2 class="text-sm font-semibold text-slate-200">ヒント</h2>
+        <ul class="mt-2 text-xs text-slate-300 list-disc pl-5 space-y-1">
+          <li>背景ボケを強くすると輪郭破綻が目立ちます（featherを上げると軽減）。</li>
+          <li>顔検出がない環境では、ピントは画面タップ中心になります。</li>
+          <li>動きの多い場面でシャッターを遅くすると「残像」っぽくなります。</li>
+        </ul>
+      </section>
+    </aside>
+  </main>
+
+  <video id="video" playsinline muted class="hidden"></video>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const env = {
+      mobile: matchMedia("(pointer: coarse)").matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
+      iOS: /iPhone|iPad|iPod/i.test(navigator.userAgent),
+    };
+
+    const els = {
+      video: $("video"),
+      view: $("view"),
+      viewWrap: $("viewWrap"),
+      btnStart: $("btnStart"),
+      btnStop: $("btnStop"),
+      btnShot: $("btnShot"),
+      btnFS: $("btnFS"),
+      statusText: $("statusText"),
+      fpsBadge: $("fpsBadge"),
+      dimsText: $("dimsText"),
+      supportBadge: $("supportBadge"),
+      tapHint: $("tapHint"),
+      selFacing: $("selFacing"),
+      selRes: $("selRes"),
+      chkLowPower: $("chkLowPower"),
+      chkFace: $("chkFace"),
+      chkDebug: $("chkDebug"),
+      rngF: $("rngF"),
+      rngFocus: $("rngFocus"),
+      rngFeather: $("rngFeather"),
+      rngShutter: $("rngShutter"),
+      rngISO: $("rngISO"),
+      rngEV: $("rngEV"),
+      rngNoise: $("rngNoise"),
+      lblF: $("lblF"),
+      lblFocus: $("lblFocus"),
+      lblFeather: $("lblFeather"),
+      lblShutter: $("lblShutter"),
+      lblISO: $("lblISO"),
+      lblEV: $("lblEV"),
+      lblNoise: $("lblNoise"),
+      fsOverlay: $("fsOverlay"),
+      btnExitFS: $("btnExitFS"),
+      btnStopFS: $("btnStopFS"),
+      btnShotFS: $("btnShotFS"),
+      fsStatus: $("fsStatus"),
+    };
+
+    const state = {
+      stream: null,
+      running: false,
+      w: 640,
+      h: 480,
+      focusPoint: { x: 0.5, y: 0.45 },
+      faceRect: null,
+      faceDetector: null,
+      faceOk: false,
+      frameCount: 0,
+      lastT: performance.now(),
+      fpsEMA: 0,
+      pseudoFS: false,
+      // Canvases
+      raw: null,
+      blur: null,
+      comp: null,
+      sharpMasked: null,
+      maskSmall: null,
+      trailA: null,
+      trailB: null,
+      noise: null,
+    };
+
+    function setStatus(msg) {
+      els.statusText.textContent = msg;
+      els.fsStatus.textContent = msg;
+    }
+
+    function clamp(v, a, b) { return Math.min(b, Math.max(a, v)); }
+
+    function parseRes(value) {
+      const [w, h] = value.split("x").map(Number);
+      return { w, h };
+    }
+
+    function createCanvas(w, h) {
+      const c = document.createElement("canvas");
+      c.width = w;
+      c.height = h;
+      return c;
+    }
+
+    function initSupport() {
+      state.faceOk = ("FaceDetector" in window);
+      if (state.faceOk) {
+        try {
+          state.faceDetector = new FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+          els.supportBadge.textContent = "FaceDetector: 利用可";
+          els.supportBadge.className = "text-xs px-2 py-1 rounded border border-emerald-700 text-emerald-200 bg-emerald-950/40";
+        } catch {
+          state.faceOk = false;
+        }
+      }
+      if (!state.faceOk) {
+        els.supportBadge.textContent = "FaceDetector: 非対応（タップでピント）";
+        els.supportBadge.className = "text-xs px-2 py-1 rounded border border-amber-700 text-amber-200 bg-amber-950/40";
+      }
+      els.chkFace.disabled = !state.faceOk;
+      if (!state.faceOk) els.chkFace.checked = false;
+      els.tapHint.classList.toggle("hidden", els.chkFace.checked);
+    }
+
+    function updateLabels() {
+      const f = Number(els.rngF.value);
+      const focus = Number(els.rngFocus.value);
+      const feather = Number(els.rngFeather.value);
+      const shutter = Number(els.rngShutter.value);
+      const iso = Number(els.rngISO.value);
+      const ev = Number(els.rngEV.value);
+      const noise = Number(els.rngNoise.value);
+
+      els.lblF.textContent = `f/${f.toFixed(1)}`;
+      els.lblFocus.textContent = focus.toFixed(2);
+      els.lblFeather.textContent = feather.toFixed(2);
+
+      // Map shutter slider to a "1/x" label (approx, purely UI)
+      // shutter=1 => fast; shutter=0 => slow
+      const minExp = 10;  // 1/10
+      const maxExp = 1000; // 1/1000
+      const inv = Math.round(minExp * Math.pow(maxExp / minExp, shutter));
+      els.lblShutter.textContent = `1/${inv} 相当`;
+
+      els.lblISO.textContent = `ISO ${iso}`;
+      els.lblEV.textContent = `${ev >= 0 ? "+" : ""}${ev.toFixed(1)} EV`;
+      els.lblNoise.textContent = noise.toFixed(2);
+
+      els.tapHint.classList.toggle("hidden", els.chkFace.checked);
+    }
+
+    function setupCanvases(w, h) {
+      state.w = w;
+      state.h = h;
+
+      // Main view
+      els.view.width = w;
+      els.view.height = h;
+      els.dimsText.textContent = `${w} × ${h}`;
+
+      // Work canvases
+      state.raw = createCanvas(w, h);
+      state.blur = createCanvas(w, h);
+      state.comp = createCanvas(w, h);
+      state.sharpMasked = createCanvas(w, h);
+
+      // Low-res mask for stability/perf
+      const div = els.chkLowPower.checked ? 5 : 4;
+      const mw = Math.max(72, Math.round(w / div));
+      const mh = Math.max(54, Math.round(h / div));
+      state.maskSmall = createCanvas(mw, mh);
+
+      // Double buffer for shutter trails
+      state.trailA = createCanvas(w, h);
+      state.trailB = createCanvas(w, h);
+
+      // Noise tile
+      state.noise = createCanvas(160, 120);
+    }
+
+    async function startCamera() {
+      if (state.running) return;
+
+      const { w: idealW, h: idealH } = parseRes(els.selRes.value);
+      const facing = els.selFacing.value;
+
+      setStatus("カメラ権限を要求中…");
+
+      const constraints = {
+        audio: false,
+        video: {
+          facingMode: { ideal: facing },
+          width: { ideal: idealW },
+          height: { ideal: idealH },
+          frameRate: env.mobile ? { ideal: 24, max: 30 } : { ideal: 30, max: 60 },
+        }
+      };
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        state.stream = stream;
+        els.video.srcObject = stream;
+        els.video.playsInline = true;
+        els.video.muted = true;
+        await els.video.play();
+
+        // Use actual track settings if available
+        const vw = els.video.videoWidth || idealW;
+        const vh = els.video.videoHeight || idealH;
+        setupCanvases(vw, vh);
+
+        // Clear trails
+        state.trailA.getContext("2d").clearRect(0, 0, vw, vh);
+        state.trailB.getContext("2d").clearRect(0, 0, vw, vh);
+
+        state.running = true;
+        state.frameCount = 0;
+        state.lastT = performance.now();
+        state.fpsEMA = 0;
+        state.faceRect = null;
+
+        els.btnStart.disabled = true;
+        els.btnStop.disabled = false;
+        els.btnShot.disabled = false;
+        els.selRes.disabled = true;
+        els.selFacing.disabled = true;
+
+        setStatus("実行中");
+        requestAnimationFrame(loop);
+      } catch (err) {
+        console.error(err);
+        setStatus("カメラ開始に失敗（HTTPS/権限/対応状況をご確認ください）");
+      }
+    }
+
+    function stopCamera() {
+      state.running = false;
+      if (state.stream) {
+        for (const tr of state.stream.getTracks()) tr.stop();
+      }
+      state.stream = null;
+      els.video.srcObject = null;
+
+      els.btnStart.disabled = false;
+      els.btnStop.disabled = true;
+      els.btnShot.disabled = true;
+      els.selRes.disabled = false;
+      els.selFacing.disabled = false;
+
+      setStatus("停止");
+      els.fpsBadge.textContent = "FPS: --";
+    }
+
+    function updateFPS(now) {
+      const dt = Math.max(0.001, (now - state.lastT) / 1000);
+      state.lastT = now;
+      const fps = 1 / dt;
+      // EMA smoothing
+      state.fpsEMA = state.fpsEMA ? (state.fpsEMA * 0.9 + fps * 0.1) : fps;
+      els.fpsBadge.textContent = `FPS: ${state.fpsEMA.toFixed(1)}`;
+    }
+
+    async function maybeDetectFace() {
+      if (!els.chkFace.checked) return;
+      if (!state.faceOk || !state.faceDetector) return;
+
+      const baseEvery = env.mobile ? 10 : 6;
+      const every = els.chkLowPower.checked ? Math.max(12, baseEvery) : baseEvery;
+      if (state.frameCount % every !== 0) return;
+
+      try {
+        const faces = await state.faceDetector.detect(els.video);
+        if (faces && faces.length) {
+          const bb = faces[0].boundingBox;
+          const sx = state.w / (els.video.videoWidth || state.w);
+          const sy = state.h / (els.video.videoHeight || state.h);
+          state.faceRect = {
+            x: bb.x * sx,
+            y: bb.y * sy,
+            w: bb.width * sx,
+            h: bb.height * sy,
+          };
+        } else {
+          state.faceRect = null;
+        }
+      } catch {
+        state.faceRect = null;
+      }
+    }
+
+    function computeFocusCenter() {
+      if (els.chkFace.checked && state.faceRect) {
+        const cx = (state.faceRect.x + state.faceRect.w / 2) / state.w;
+        const cy = (state.faceRect.y + state.faceRect.h / 2) / state.h;
+        return { x: clamp(cx, 0, 1), y: clamp(cy, 0, 1) };
+      }
+      return { ...state.focusPoint };
+    }
+
+    function fToBlurPx(f) {
+      // Heuristic mapping: f small => bigger blur
+      const t = 16 / f;
+      const cap = els.chkLowPower.checked ? 18 : 28;
+      return clamp(Math.pow(t, 1.15) * 3.2, 0, cap);
+    }
+
+    function isoToBrightnessAndNoise(iso, ev, extraNoise) {
+      const stops = Math.log2(iso / 100);
+      const brightness = clamp(1 + stops * 0.18 + ev * 0.25, 0.4, 2.4);
+      const baseNoise = clamp(stops * 0.10, 0, 0.55);
+      const noise = clamp(baseNoise + extraNoise * 0.55, 0, 0.85);
+      return { brightness, noise };
+    }
+
+    function drawNoiseTile(ctx, w, h, amount) {
+      ctx.clearRect(0, 0, w, h);
+      if (amount <= 0.001) return;
+
+      const img = ctx.getImageData(0, 0, w, h);
+      const d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const n = (Math.random() * 255) | 0;
+        d[i] = n;
+        d[i + 1] = n;
+        d[i + 2] = n;
+        d[i + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+    }
+
+    function buildMask(maskCtx, mw, mh, center, focus, feather) {
+      maskCtx.clearRect(0, 0, mw, mh);
+
+      const cx = center.x * mw;
+      const cy = center.y * mh;
+
+      const minDim = Math.min(mw, mh);
+      const radius = minDim * (0.12 + focus * 0.55);
+
+      const inner = radius * (0.55 + feather * 0.30);
+      const outer = radius * (1.15 + feather * 0.85);
+
+      const g = maskCtx.createRadialGradient(cx, cy, Math.max(1, inner), cx, cy, Math.max(inner + 1, outer));
+      g.addColorStop(0, "rgba(255,255,255,1)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+
+      maskCtx.fillStyle = g;
+      maskCtx.fillRect(0, 0, mw, mh);
+
+      if (els.chkFace.checked && state.faceRect) {
+        const fx = (state.faceRect.x / state.w) * mw;
+        const fy = (state.faceRect.y / state.h) * mh;
+        const fw = (state.faceRect.w / state.w) * mw;
+        const fh = (state.faceRect.h / state.h) * mh;
+        maskCtx.save();
+        maskCtx.globalCompositeOperation = "lighter";
+        maskCtx.fillStyle = "rgba(255,255,255,0.35)";
+        const pad = Math.min(fw, fh) * 0.25;
+        maskCtx.fillRect(fx - pad, fy - pad, fw + pad * 2, fh + pad * 2);
+        maskCtx.restore();
+      }
+    }
+
+    function compositeDepthOfField({ blurPx, center, focus, feather, debug }) {
+      const w = state.w, h = state.h;
+      const rawCtx = state.raw.getContext("2d");
+      const blurCtx = state.blur.getContext("2d");
+      const compCtx = state.comp.getContext("2d");
+      const sharpCtx = state.sharpMasked.getContext("2d");
+      const maskCtx = state.maskSmall.getContext("2d");
+
+      rawCtx.setTransform(1, 0, 0, 1, 0, 0);
+      rawCtx.filter = "none";
+      rawCtx.drawImage(els.video, 0, 0, w, h);
+
+      buildMask(maskCtx, state.maskSmall.width, state.maskSmall.height, center, focus, feather);
+
+      blurCtx.setTransform(1, 0, 0, 1, 0, 0);
+      blurCtx.clearRect(0, 0, w, h);
+      blurCtx.filter = `blur(${blurPx.toFixed(2)}px)`;
+      blurCtx.drawImage(state.raw, 0, 0, w, h);
+      blurCtx.filter = "none";
+
+      sharpCtx.setTransform(1, 0, 0, 1, 0, 0);
+      sharpCtx.clearRect(0, 0, w, h);
+      sharpCtx.globalCompositeOperation = "source-over";
+      sharpCtx.drawImage(state.raw, 0, 0, w, h);
+      sharpCtx.globalCompositeOperation = "destination-in";
+      sharpCtx.imageSmoothingEnabled = true;
+      sharpCtx.drawImage(state.maskSmall, 0, 0, w, h);
+      sharpCtx.globalCompositeOperation = "source-over";
+
+      compCtx.setTransform(1, 0, 0, 1, 0, 0);
+      compCtx.clearRect(0, 0, w, h);
+      compCtx.drawImage(state.blur, 0, 0);
+      compCtx.drawImage(state.sharpMasked, 0, 0);
+
+      if (debug) {
+        compCtx.save();
+        compCtx.globalAlpha = 0.55;
+        compCtx.globalCompositeOperation = "screen";
+        compCtx.imageSmoothingEnabled = true;
+        compCtx.drawImage(state.maskSmall, 0, 0, w, h);
+        compCtx.restore();
+
+        compCtx.save();
+        compCtx.strokeStyle = "rgba(99,102,241,0.9)";
+        compCtx.lineWidth = 2;
+        compCtx.beginPath();
+        compCtx.arc(center.x * w, center.y * h, Math.max(8, Math.min(w, h) * 0.02), 0, Math.PI * 2);
+        compCtx.stroke();
+        compCtx.restore();
+      }
+    }
+
+    function applyShutterAndISO() {
+      const w = state.w, h = state.h;
+      const viewCtx = els.view.getContext("2d");
+      const compCanvas = state.comp;
+
+      const shutter = Number(els.rngShutter.value);
+      const mix = clamp(shutter, 0.02, 1.0);
+
+      let finalCanvas = compCanvas;
+      if (mix < 0.999) {
+        const a = state.trailA;
+        const b = state.trailB;
+        const bctx = b.getContext("2d");
+        bctx.setTransform(1, 0, 0, 1, 0, 0);
+        bctx.clearRect(0, 0, w, h);
+        bctx.globalCompositeOperation = "source-over";
+        bctx.globalAlpha = 1 - mix;
+        bctx.drawImage(a, 0, 0);
+        bctx.globalAlpha = mix;
+        bctx.drawImage(compCanvas, 0, 0);
+        bctx.globalAlpha = 1;
+
+        state.trailA = b;
+        state.trailB = a;
+        finalCanvas = state.trailA;
+      }
+
+      const iso = Number(els.rngISO.value);
+      const ev = Number(els.rngEV.value);
+      const extraNoise = Number(els.rngNoise.value);
+      const { brightness, noise } = isoToBrightnessAndNoise(iso, ev, extraNoise);
+
+      viewCtx.setTransform(1, 0, 0, 1, 0, 0);
+      viewCtx.clearRect(0, 0, w, h);
+      viewCtx.imageSmoothingEnabled = true;
+      viewCtx.filter = `brightness(${brightness.toFixed(3)})`;
+      viewCtx.drawImage(finalCanvas, 0, 0);
+      viewCtx.filter = "none";
+
+      if (noise > 0.001) {
+        const noiseEvery = (env.mobile || els.chkLowPower.checked) ? 3 : 2;
+        if (state.frameCount % noiseEvery === 0) {
+          drawNoiseTile(state.noise.getContext("2d"), state.noise.width, state.noise.height, noise);
+        }
+        viewCtx.save();
+        viewCtx.globalAlpha = clamp(noise, 0, 0.85);
+        viewCtx.globalCompositeOperation = "soft-light";
+        viewCtx.drawImage(state.noise, 0, 0, w, h);
+        viewCtx.restore();
+      }
+    }
+
+    async function loop(now) {
+      if (!state.running) return;
+      updateFPS(now);
+      state.frameCount++;
+
+      await maybeDetectFace();
+
+      const f = Number(els.rngF.value);
+      const blurPx = fToBlurPx(f);
+      const focus = Number(els.rngFocus.value);
+      const feather = Number(els.rngFeather.value);
+      const debug = els.chkDebug.checked;
+
+      const center = computeFocusCenter();
+      compositeDepthOfField({ blurPx, center, focus, feather, debug });
+      applyShutterAndISO();
+
+      requestAnimationFrame(loop);
+    }
+
+    async function snapshotShareOrDownload() {
+      if (!state.running) return;
+
+      const ts = new Date().toISOString().replace(/[:.]/g, "-");
+      const name = `pseudo-camera-${ts}.png`;
+
+      const blob = await new Promise((resolve) => els.view.toBlob(resolve, "image/png"));
+      if (!blob) {
+        // Fallback
+        const a = document.createElement("a");
+        a.download = name;
+        a.href = els.view.toDataURL("image/png");
+        a.click();
+        return;
+      }
+
+      const file = new File([blob], name, { type: "image/png" });
+
+      // Prefer share sheet on mobile
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            title: "疑似カメラ スナップ",
+            text: "Pseudo camera snapshot",
+            files: [file],
+          });
+          return;
+        } catch {
+          // user cancelled / failed -> fallback to download
+        }
+      }
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.download = name;
+      a.href = url;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    function canvasToNormPoint(clientX, clientY) {
+      const rect = els.view.getBoundingClientRect();
+      const x = (clientX - rect.left) / rect.width;
+      const y = (clientY - rect.top) / rect.height;
+      return { x: clamp(x, 0, 1), y: clamp(y, 0, 1) };
+    }
+
+    async function enterFullscreen() {
+      els.fsOverlay.classList.remove("hidden");
+
+      // Native fullscreen if available
+      if (els.viewWrap.requestFullscreen) {
+        try {
+          await els.viewWrap.requestFullscreen({ navigationUI: "hide" });
+          return;
+        } catch {
+          // fallback below
+        }
+      }
+
+      // iOS Safari / unsupported: pseudo fullscreen
+      state.pseudoFS = true;
+      document.body.classList.add("pseudo-fs");
+    }
+
+    async function exitFullscreen() {
+      if (document.fullscreenElement) {
+        try { await document.exitFullscreen(); } catch { /* ignore */ }
+      }
+      if (state.pseudoFS) {
+        state.pseudoFS = false;
+        document.body.classList.remove("pseudo-fs");
+      }
+      els.fsOverlay.classList.add("hidden");
+    }
+
+    async function toggleFullscreen() {
+      const isNative = !!document.fullscreenElement;
+      const isPseudo = state.pseudoFS;
+      if (isNative || isPseudo) return exitFullscreen();
+      return enterFullscreen();
+    }
+
+    // Events
+    els.btnStart.addEventListener("click", startCamera);
+    els.btnStop.addEventListener("click", stopCamera);
+    els.btnShot.addEventListener("click", snapshotShareOrDownload);
+    els.btnFS.addEventListener("click", toggleFullscreen);
+
+    els.btnExitFS.addEventListener("click", exitFullscreen);
+    els.btnStopFS.addEventListener("click", () => { stopCamera(); exitFullscreen(); });
+    els.btnShotFS.addEventListener("click", snapshotShareOrDownload);
+
+    document.addEventListener("fullscreenchange", () => {
+      // If user exits via OS gesture
+      if (!document.fullscreenElement && !state.pseudoFS) {
+        els.fsOverlay.classList.add("hidden");
+      }
+    });
+
+    function restartIfRunning() {
+      if (!state.running) return;
+      stopCamera();
+      startCamera();
+    }
+
+    els.selRes.addEventListener("change", restartIfRunning);
+    els.selFacing.addEventListener("change", restartIfRunning);
+
+    for (const el of [els.rngF, els.rngFocus, els.rngFeather, els.rngShutter, els.rngISO, els.rngEV, els.rngNoise, els.chkFace, els.chkDebug]) {
+      el.addEventListener("input", updateLabels);
+      el.addEventListener("change", updateLabels);
+    }
+
+    els.chkLowPower.addEventListener("change", () => {
+      // Rebuild canvases for mask size changes
+      if (state.running) {
+        setupCanvases(state.w, state.h);
+      }
+    });
+
+    els.chkFace.addEventListener("change", () => {
+      els.tapHint.classList.toggle("hidden", els.chkFace.checked);
+      state.faceRect = null;
+    });
+
+    // Tap to set focus when face tracking is OFF
+    els.view.addEventListener("pointerdown", (ev) => {
+      if (els.chkFace.checked) return;
+      const p = canvasToNormPoint(ev.clientX, ev.clientY);
+      state.focusPoint = p;
+    });
+
+    // Fallback for older iOS where pointer events can be quirky
+    els.view.addEventListener("touchstart", (ev) => {
+      if (els.chkFace.checked) return;
+      const t = ev.touches && ev.touches[0];
+      if (!t) return;
+      state.focusPoint = canvasToNormPoint(t.clientX, t.clientY);
+    }, { passive: true });
+
+    // Init
+    initSupport();
+    updateLabels();
+
+    // Mobile defaults
+    if (env.mobile) {
+      els.chkLowPower.checked = true;
+      // Smaller screens default to low res
+      if (Math.min(screen.width, screen.height) <= 420) {
+        els.selRes.value = "320x240";
+      }
+    }
+
+    // Autopause on page hide
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && state.running) stopCamera();
+    });
+
+    // Prevent iOS double-tap zoom on the preview area
+    let lastTap = 0;
+    els.viewWrap.addEventListener("touchend", (e) => {
+      const now = Date.now();
+      if (now - lastTap < 300) e.preventDefault();
+      lastTap = now;
+    }, { passive: false });
+  </script>
+</body>
+</html>

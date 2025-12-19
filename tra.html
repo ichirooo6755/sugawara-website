@@ -1,0 +1,1437 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>東京交通トラッキングシステム - リアルタイム版</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 100vh; width: 100%; }
+        .vehicle-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-size: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+        .vehicle-icon:hover { transform: scale(1.4); z-index: 10000 !important; }
+        .control-panel {
+            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.95);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .stats-card {
+            backdrop-filter: blur(10px);
+            background: rgba(255,255,255,0.95);
+        }
+        .line-item { transition: all 0.2s; }
+        .line-item:hover { background: rgba(0,0,0,0.05); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
+        .status-live { animation: blink 1s infinite; }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .api-status { font-size: 10px; padding: 2px 6px; border-radius: 4px; }
+        .api-ok { background: #10b981; color: white; }
+        .api-error { background: #ef4444; color: white; }
+        .api-sim { background: #f59e0b; color: white; }
+    </style>
+</head>
+<body class="font-sans">
+    <div id="map"></div>
+    
+    <!-- コントロールパネル -->
+    <div class="control-panel fixed top-4 left-4 p-4 rounded-2xl shadow-xl z-[1000] w-80">
+        <h1 class="text-lg font-bold text-gray-800 mb-1 flex items-center gap-2">
+            🚃 東京交通トラッカー
+        </h1>
+        <div class="flex items-center gap-2 mb-3">
+            <span id="apiStatus" class="api-status api-sim">シミュレーション</span>
+            <span id="dataSource" class="text-xs text-gray-500"></span>
+        </div>
+        
+        <!-- 時間スケール説明 -->
+        <div class="bg-blue-50 p-2 rounded-lg mb-3 text-xs">
+            <div class="font-bold text-blue-700 mb-1">⏱️ 時間スケール</div>
+            <div class="text-blue-600">
+                1x = リアルタイム相当<br>
+                60x = 1秒で1分進む<br>
+                現在: <span id="timeScaleInfo" class="font-bold">60x（デモ用）</span>
+            </div>
+        </div>
+        
+        <!-- カテゴリ別トグル -->
+        <div class="space-y-2 mb-4">
+            <div class="flex gap-2">
+                <button id="toggleAllMetro" class="flex-1 text-xs bg-gradient-to-r from-blue-500 to-blue-600 text-white py-1.5 px-2 rounded-lg hover:opacity-90">
+                    🚇 メトロ
+                </button>
+                <button id="toggleAllToei" class="flex-1 text-xs bg-gradient-to-r from-green-500 to-green-600 text-white py-1.5 px-2 rounded-lg hover:opacity-90">
+                    🚈 都営
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <button id="toggleAllJR" class="flex-1 text-xs bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-1.5 px-2 rounded-lg hover:opacity-90">
+                    🚃 JR
+                </button>
+                <button id="toggleAllPrivate" class="flex-1 text-xs bg-gradient-to-r from-purple-500 to-purple-600 text-white py-1.5 px-2 rounded-lg hover:opacity-90">
+                    🚋 私鉄
+                </button>
+            </div>
+            <div class="flex gap-2">
+                <button id="toggleAllShinkansen" class="flex-1 text-xs bg-gradient-to-r from-cyan-500 to-cyan-600 text-white py-1.5 px-2 rounded-lg hover:opacity-90">
+                    🚅 新幹線
+                </button>
+                <button id="toggleAllAirplane" class="flex-1 text-xs bg-gradient-to-r from-orange-500 to-orange-600 text-white py-1.5 px-2 rounded-lg hover:opacity-90">
+                    ✈️ 飛行機
+                </button>
+            </div>
+        </div>
+
+        <!-- 路線一覧 -->
+        <div id="lineList" class="space-y-1 text-sm max-h-48 overflow-y-auto border-t pt-3">
+        </div>
+        
+        <!-- 時間スケール調整 -->
+        <div class="mt-4 pt-3 border-t border-gray-200">
+            <div class="flex items-center justify-between text-sm text-gray-600 mb-1">
+                <span>時間スケール</span>
+                <span id="speedLabel" class="font-bold text-blue-600">60x</span>
+            </div>
+            <input type="range" id="speedControl" min="1" max="120" step="1" value="60" class="w-full accent-blue-500">
+            <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>1x (実時間)</span>
+                <span>120x (2分/秒)</span>
+            </div>
+        </div>
+        
+        <div class="flex gap-2 mt-3">
+            <button id="resetView" class="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 text-white py-2 px-3 rounded-lg hover:opacity-90 transition text-sm font-medium">
+                🗾 東京全体
+            </button>
+            <button id="hideAllLines" class="flex-1 bg-gray-200 text-gray-700 py-2 px-3 rounded-lg hover:bg-gray-300 transition text-sm font-medium">
+                全非表示
+            </button>
+        </div>
+    </div>
+    
+    <!-- 統計パネル -->
+    <div class="stats-card fixed bottom-4 left-4 p-4 rounded-2xl shadow-xl z-[1000]">
+        <div class="flex gap-6">
+            <div class="text-center">
+                <div id="totalVehicles" class="text-2xl font-bold text-gray-800">0</div>
+                <div class="text-xs text-gray-500">運行車両</div>
+            </div>
+            <div class="text-center border-l pl-6">
+                <div id="totalLines" class="text-2xl font-bold text-gray-800">0</div>
+                <div class="text-xs text-gray-500">路線数</div>
+            </div>
+            <div class="text-center border-l pl-6">
+                <div id="currentTime" class="text-2xl font-bold text-gray-800">--:--</div>
+                <div class="text-xs text-gray-500">現在時刻</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 情報パネル -->
+    <div class="stats-card fixed bottom-4 right-4 p-3 rounded-xl shadow-xl z-[1000] text-xs max-w-xs">
+        <div class="text-gray-600 font-medium mb-2">📍 速度について</div>
+        <div class="text-gray-500 space-y-1">
+            <div>• 地下鉄/JR: 約40km/h（平均）</div>
+            <div>• 新幹線: 約250km/h</div>
+            <div>• 飛行機: 約800km/h</div>
+            <div class="text-blue-600 mt-2 font-medium">
+                ※ 駅間距離と実際の所要時間から<br>計算した現実的な速度です
+            </div>
+        </div>
+        <div class="border-t mt-2 pt-2 text-gray-400">
+            <div>💡 1x=リアルタイム相当</div>
+            <div>60xで1分が1秒で進みます</div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // 設定
+        // ========================================
+        const CONFIG = {
+            // 時間スケール（1 = リアルタイム、60 = 1秒で1分進む）
+            timeScale: 60,
+            
+            // 更新間隔（ミリ秒）
+            updateInterval: 100,
+            
+            // 平均速度 (km/h)
+            speeds: {
+                metro: 35,      // 地下鉄（駅間含む平均）
+                toei: 32,       // 都営地下鉄
+                jr: 40,         // JR在来線
+                private: 38,    // 私鉄
+                shinkansen: 220, // 新幹線（平均）
+                airplane: 800   // 飛行機
+            }
+        };
+
+        // 地図初期化
+        const map = L.map('map').setView([35.6812, 139.7671], 12);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; OpenStreetMap &copy; CARTO',
+            maxZoom: 19
+        }).addTo(map);
+
+        // データ格納
+        let vehicles = [];
+        let markers = {};
+        let routeLines = {};
+        let lineVisibility = {};
+
+        // ========================================
+        // 実際の駅座標データ（東京の主要路線）
+        // ========================================
+        const railwayData = {
+            // 東京メトロ
+            metro: {
+                ginza: {
+                    name: '銀座線',
+                    color: '#FF9500',
+                    avgTime: 3, // 駅間平均時間（分）
+                    stations: [
+                        { name: '浅草', lat: 35.7112, lng: 139.7964 },
+                        { name: '田原町', lat: 35.7101, lng: 139.7907 },
+                        { name: '稲荷町', lat: 35.7074, lng: 139.7829 },
+                        { name: '上野', lat: 35.7078, lng: 139.7749 },
+                        { name: '上野広小路', lat: 35.7073, lng: 139.7622 },
+                        { name: '末広町', lat: 35.6988, lng: 139.7730 },
+                        { name: '神田', lat: 35.6915, lng: 139.7636 },
+                        { name: '三越前', lat: 35.6867, lng: 139.7639 },
+                        { name: '日本橋', lat: 35.6813, lng: 139.7652 },
+                        { name: '京橋', lat: 35.6750, lng: 139.7639 },
+                        { name: '銀座', lat: 35.6719, lng: 139.7582 },
+                        { name: '新橋', lat: 35.6627, lng: 139.7573 },
+                        { name: '虎ノ門', lat: 35.6583, lng: 139.7516 },
+                        { name: '溜池山王', lat: 35.6738, lng: 139.7414 },
+                        { name: '赤坂見附', lat: 35.6769, lng: 139.7366 },
+                        { name: '青山一丁目', lat: 35.6723, lng: 139.7234 },
+                        { name: '外苑前', lat: 35.6654, lng: 139.7122 },
+                        { name: '表参道', lat: 35.6598, lng: 139.7006 },
+                        { name: '渋谷', lat: 35.6590, lng: 139.7020 },
+                    ]
+                },
+                marunouchi: {
+                    name: '丸ノ内線',
+                    color: '#F62E36',
+                    avgTime: 2,
+                    stations: [
+                        { name: '荻窪', lat: 35.7034, lng: 139.6196 },
+                        { name: '南阿佐ヶ谷', lat: 35.6983, lng: 139.6353 },
+                        { name: '新高円寺', lat: 35.6949, lng: 139.6492 },
+                        { name: '東高円寺', lat: 35.6957, lng: 139.6614 },
+                        { name: '新中野', lat: 35.6973, lng: 139.6766 },
+                        { name: '中野坂上', lat: 35.6976, lng: 139.6855 },
+                        { name: '西新宿', lat: 35.6947, lng: 139.6925 },
+                        { name: '新宿', lat: 35.6896, lng: 139.6994 },
+                        { name: '新宿三丁目', lat: 35.6880, lng: 139.7087 },
+                        { name: '新宿御苑前', lat: 35.6887, lng: 139.7142 },
+                        { name: '四谷三丁目', lat: 35.6870, lng: 139.7217 },
+                        { name: '四ツ谷', lat: 35.6860, lng: 139.7300 },
+                        { name: '赤坂見附', lat: 35.6769, lng: 139.7366 },
+                        { name: '国会議事堂前', lat: 35.6736, lng: 139.7450 },
+                        { name: '霞ケ関', lat: 35.6737, lng: 139.7510 },
+                        { name: '銀座', lat: 35.6750, lng: 139.7639 },
+                        { name: '東京', lat: 35.6819, lng: 139.7649 },
+                        { name: '大手町', lat: 35.6867, lng: 139.7630 },
+                        { name: '淡路町', lat: 35.6952, lng: 139.7671 },
+                        { name: '御茶ノ水', lat: 35.6998, lng: 139.7651 },
+                        { name: '本郷三丁目', lat: 35.7067, lng: 139.7598 },
+                        { name: '後楽園', lat: 35.7078, lng: 139.7515 },
+                        { name: '茗荷谷', lat: 35.7177, lng: 139.7284 },
+                        { name: '新大塚', lat: 35.7274, lng: 139.7280 },
+                        { name: '池袋', lat: 35.7283, lng: 139.7102 },
+                    ]
+                },
+                hibiya: {
+                    name: '日比谷線',
+                    color: '#B5B5AC',
+                    avgTime: 2,
+                    stations: [
+                        { name: '北千住', lat: 35.7497, lng: 139.8047 },
+                        { name: '南千住', lat: 35.7324, lng: 139.8007 },
+                        { name: '三ノ輪', lat: 35.7268, lng: 139.7912 },
+                        { name: '入谷', lat: 35.7200, lng: 139.7852 },
+                        { name: '上野', lat: 35.7141, lng: 139.7773 },
+                        { name: '仲御徒町', lat: 35.7072, lng: 139.7741 },
+                        { name: '秋葉原', lat: 35.6984, lng: 139.7731 },
+                        { name: '小伝馬町', lat: 35.6917, lng: 139.7783 },
+                        { name: '人形町', lat: 35.6859, lng: 139.7831 },
+                        { name: '茅場町', lat: 35.6797, lng: 139.7807 },
+                        { name: '八丁堀', lat: 35.6744, lng: 139.7769 },
+                        { name: '築地', lat: 35.6699, lng: 139.7717 },
+                        { name: '東銀座', lat: 35.6697, lng: 139.7654 },
+                        { name: '銀座', lat: 35.6719, lng: 139.7606 },
+                        { name: '日比谷', lat: 35.6750, lng: 139.7582 },
+                        { name: '霞ケ関', lat: 35.6737, lng: 139.7510 },
+                        { name: '神谷町', lat: 35.6644, lng: 139.7444 },
+                        { name: '六本木', lat: 35.6629, lng: 139.7314 },
+                        { name: '広尾', lat: 35.6516, lng: 139.7224 },
+                        { name: '恵比寿', lat: 35.6467, lng: 139.7108 },
+                        { name: '中目黒', lat: 35.6440, lng: 139.6988 },
+                    ]
+                },
+                tozai: {
+                    name: '東西線',
+                    color: '#009BBF',
+                    avgTime: 2.5,
+                    stations: [
+                        { name: '中野', lat: 35.7065, lng: 139.6658 },
+                        { name: '落合', lat: 35.7141, lng: 139.6854 },
+                        { name: '高田馬場', lat: 35.7127, lng: 139.7036 },
+                        { name: '早稲田', lat: 35.7091, lng: 139.7222 },
+                        { name: '神楽坂', lat: 35.7018, lng: 139.7363 },
+                        { name: '飯田橋', lat: 35.7014, lng: 139.7452 },
+                        { name: '九段下', lat: 35.6955, lng: 139.7513 },
+                        { name: '竹橋', lat: 35.6914, lng: 139.7567 },
+                        { name: '大手町', lat: 35.6867, lng: 139.7630 },
+                        { name: '日本橋', lat: 35.6813, lng: 139.7744 },
+                        { name: '茅場町', lat: 35.6797, lng: 139.7807 },
+                        { name: '門前仲町', lat: 35.6730, lng: 139.7953 },
+                        { name: '木場', lat: 35.6703, lng: 139.8072 },
+                        { name: '東陽町', lat: 35.6694, lng: 139.8177 },
+                        { name: '南砂町', lat: 35.6711, lng: 139.8361 },
+                        { name: '西葛西', lat: 35.6594, lng: 139.8547 },
+                        { name: '葛西', lat: 35.6586, lng: 139.8711 },
+                        { name: '浦安', lat: 35.6533, lng: 139.9017 },
+                        { name: '南行徳', lat: 35.6617, lng: 139.9128 },
+                        { name: '行徳', lat: 35.6717, lng: 139.9228 },
+                        { name: '妙典', lat: 35.6789, lng: 139.9331 },
+                        { name: '原木中山', lat: 35.6906, lng: 139.9481 },
+                        { name: '西船橋', lat: 35.7003, lng: 139.9625 },
+                    ]
+                },
+                chiyoda: {
+                    name: '千代田線',
+                    color: '#00BB85',
+                    avgTime: 2,
+                    stations: [
+                        { name: '代々木上原', lat: 35.6683, lng: 139.6778 },
+                        { name: '代々木公園', lat: 35.6700, lng: 139.6897 },
+                        { name: '明治神宮前', lat: 35.6703, lng: 139.7031 },
+                        { name: '表参道', lat: 35.6654, lng: 139.7122 },
+                        { name: '乃木坂', lat: 35.6669, lng: 139.7267 },
+                        { name: '赤坂', lat: 35.6727, lng: 139.7378 },
+                        { name: '国会議事堂前', lat: 35.6736, lng: 139.7450 },
+                        { name: '霞ケ関', lat: 35.6737, lng: 139.7510 },
+                        { name: '日比谷', lat: 35.6750, lng: 139.7582 },
+                        { name: '二重橋前', lat: 35.6767, lng: 139.7619 },
+                        { name: '大手町', lat: 35.6867, lng: 139.7630 },
+                        { name: '新御茶ノ水', lat: 35.6964, lng: 139.7648 },
+                        { name: '湯島', lat: 35.7078, lng: 139.7689 },
+                        { name: '根津', lat: 35.7177, lng: 139.7622 },
+                        { name: '千駄木', lat: 35.7272, lng: 139.7597 },
+                        { name: '西日暮里', lat: 35.7319, lng: 139.7672 },
+                        { name: '町屋', lat: 35.7436, lng: 139.7819 },
+                        { name: '北千住', lat: 35.7497, lng: 139.8047 },
+                        { name: '綾瀬', lat: 35.7628, lng: 139.8244 },
+                        { name: '北綾瀬', lat: 35.7772, lng: 139.8306 },
+                    ]
+                },
+                yurakucho: {
+                    name: '有楽町線',
+                    color: '#C1A470',
+                    avgTime: 2,
+                    stations: [
+                        { name: '和光市', lat: 35.7878, lng: 139.6214 },
+                        { name: '地下鉄成増', lat: 35.7781, lng: 139.6328 },
+                        { name: '地下鉄赤塚', lat: 35.7700, lng: 139.6431 },
+                        { name: '平和台', lat: 35.7619, lng: 139.6531 },
+                        { name: '氷川台', lat: 35.7539, lng: 139.6631 },
+                        { name: '小竹向原', lat: 35.7433, lng: 139.6792 },
+                        { name: '千川', lat: 35.7367, lng: 139.6914 },
+                        { name: '要町', lat: 35.7322, lng: 139.7017 },
+                        { name: '池袋', lat: 35.7283, lng: 139.7102 },
+                        { name: '東池袋', lat: 35.7258, lng: 139.7189 },
+                        { name: '護国寺', lat: 35.7178, lng: 139.7281 },
+                        { name: '江戸川橋', lat: 35.7117, lng: 139.7356 },
+                        { name: '飯田橋', lat: 35.7014, lng: 139.7452 },
+                        { name: '市ケ谷', lat: 35.6914, lng: 139.7436 },
+                        { name: '麹町', lat: 35.6844, lng: 139.7389 },
+                        { name: '永田町', lat: 35.6789, lng: 139.7394 },
+                        { name: '桜田門', lat: 35.6764, lng: 139.7517 },
+                        { name: '有楽町', lat: 35.6750, lng: 139.7600 },
+                        { name: '銀座一丁目', lat: 35.6722, lng: 139.7656 },
+                        { name: '新富町', lat: 35.6686, lng: 139.7736 },
+                        { name: '月島', lat: 35.6625, lng: 139.7856 },
+                        { name: '豊洲', lat: 35.6533, lng: 139.7964 },
+                        { name: '辰巳', lat: 35.6453, lng: 139.8106 },
+                        { name: '新木場', lat: 35.6428, lng: 139.8267 },
+                    ]
+                },
+                hanzomon: {
+                    name: '半蔵門線',
+                    color: '#8F76D6',
+                    avgTime: 2,
+                    stations: [
+                        { name: '渋谷', lat: 35.6590, lng: 139.7020 },
+                        { name: '表参道', lat: 35.6654, lng: 139.7122 },
+                        { name: '青山一丁目', lat: 35.6723, lng: 139.7234 },
+                        { name: '永田町', lat: 35.6789, lng: 139.7394 },
+                        { name: '半蔵門', lat: 35.6852, lng: 139.7447 },
+                        { name: '九段下', lat: 35.6955, lng: 139.7513 },
+                        { name: '神保町', lat: 35.6958, lng: 139.7578 },
+                        { name: '大手町', lat: 35.6867, lng: 139.7630 },
+                        { name: '三越前', lat: 35.6867, lng: 139.7739 },
+                        { name: '水天宮前', lat: 35.6833, lng: 139.7858 },
+                        { name: '清澄白河', lat: 35.6808, lng: 139.8008 },
+                        { name: '住吉', lat: 35.6858, lng: 139.8153 },
+                        { name: '錦糸町', lat: 35.6964, lng: 139.8142 },
+                        { name: '押上', lat: 35.7106, lng: 139.8136 },
+                    ]
+                },
+                namboku: {
+                    name: '南北線',
+                    color: '#00AC9B',
+                    avgTime: 2,
+                    stations: [
+                        { name: '目黒', lat: 35.6336, lng: 139.7158 },
+                        { name: '白金台', lat: 35.6403, lng: 139.7244 },
+                        { name: '白金高輪', lat: 35.6472, lng: 139.7333 },
+                        { name: '麻布十番', lat: 35.6558, lng: 139.7372 },
+                        { name: '六本木一丁目', lat: 35.6639, lng: 139.7397 },
+                        { name: '溜池山王', lat: 35.6738, lng: 139.7414 },
+                        { name: '永田町', lat: 35.6789, lng: 139.7394 },
+                        { name: '四ツ谷', lat: 35.6860, lng: 139.7300 },
+                        { name: '市ケ谷', lat: 35.6914, lng: 139.7436 },
+                        { name: '飯田橋', lat: 35.7014, lng: 139.7452 },
+                        { name: '後楽園', lat: 35.7078, lng: 139.7515 },
+                        { name: '東大前', lat: 35.7175, lng: 139.7592 },
+                        { name: '本駒込', lat: 35.7283, lng: 139.7467 },
+                        { name: '駒込', lat: 35.7361, lng: 139.7478 },
+                        { name: '西ケ原', lat: 35.7450, lng: 139.7492 },
+                        { name: '王子', lat: 35.7536, lng: 139.7381 },
+                        { name: '王子神谷', lat: 35.7661, lng: 139.7328 },
+                        { name: '志茂', lat: 35.7781, lng: 139.7217 },
+                        { name: '赤羽岩淵', lat: 35.7844, lng: 139.7194 },
+                    ]
+                },
+                fukutoshin: {
+                    name: '副都心線',
+                    color: '#9C5E31',
+                    avgTime: 2.5,
+                    stations: [
+                        { name: '渋谷', lat: 35.6590, lng: 139.7020 },
+                        { name: '明治神宮前', lat: 35.6703, lng: 139.7031 },
+                        { name: '北参道', lat: 35.6786, lng: 139.7039 },
+                        { name: '新宿三丁目', lat: 35.6880, lng: 139.7087 },
+                        { name: '東新宿', lat: 35.6997, lng: 139.7125 },
+                        { name: '西早稲田', lat: 35.7122, lng: 139.7142 },
+                        { name: '雑司が谷', lat: 35.7214, lng: 139.7092 },
+                        { name: '池袋', lat: 35.7283, lng: 139.7102 },
+                        { name: '要町', lat: 35.7322, lng: 139.7017 },
+                        { name: '千川', lat: 35.7367, lng: 139.6914 },
+                        { name: '小竹向原', lat: 35.7433, lng: 139.6792 },
+                        { name: '氷川台', lat: 35.7539, lng: 139.6631 },
+                        { name: '平和台', lat: 35.7619, lng: 139.6531 },
+                        { name: '地下鉄赤塚', lat: 35.7700, lng: 139.6431 },
+                        { name: '地下鉄成増', lat: 35.7781, lng: 139.6328 },
+                        { name: '和光市', lat: 35.7878, lng: 139.6214 },
+                    ]
+                }
+            },
+            
+            // 都営地下鉄
+            toei: {
+                asakusa: {
+                    name: '浅草線',
+                    color: '#E85298',
+                    avgTime: 2,
+                    stations: [
+                        { name: '西馬込', lat: 35.5878, lng: 139.7081 },
+                        { name: '馬込', lat: 35.5939, lng: 139.7128 },
+                        { name: '中延', lat: 35.6061, lng: 139.7133 },
+                        { name: '戸越', lat: 35.6150, lng: 139.7153 },
+                        { name: '五反田', lat: 35.6258, lng: 139.7236 },
+                        { name: '高輪台', lat: 35.6350, lng: 139.7331 },
+                        { name: '泉岳寺', lat: 35.6403, lng: 139.7408 },
+                        { name: '三田', lat: 35.6506, lng: 139.7469 },
+                        { name: '大門', lat: 35.6567, lng: 139.7536 },
+                        { name: '新橋', lat: 35.6658, lng: 139.7594 },
+                        { name: '東銀座', lat: 35.6697, lng: 139.7654 },
+                        { name: '宝町', lat: 35.6761, lng: 139.7722 },
+                        { name: '日本橋', lat: 35.6813, lng: 139.7744 },
+                        { name: '人形町', lat: 35.6859, lng: 139.7831 },
+                        { name: '東日本橋', lat: 35.6889, lng: 139.7881 },
+                        { name: '浅草橋', lat: 35.6972, lng: 139.7883 },
+                        { name: '蔵前', lat: 35.7033, lng: 139.7906 },
+                        { name: '浅草', lat: 35.7112, lng: 139.7964 },
+                        { name: '本所吾妻橋', lat: 35.7108, lng: 139.8050 },
+                        { name: '押上', lat: 35.7106, lng: 139.8136 },
+                    ]
+                },
+                mita: {
+                    name: '三田線',
+                    color: '#0079C2',
+                    avgTime: 2,
+                    stations: [
+                        { name: '目黒', lat: 35.6336, lng: 139.7158 },
+                        { name: '白金台', lat: 35.6403, lng: 139.7244 },
+                        { name: '白金高輪', lat: 35.6472, lng: 139.7333 },
+                        { name: '三田', lat: 35.6506, lng: 139.7469 },
+                        { name: '芝公園', lat: 35.6558, lng: 139.7508 },
+                        { name: '御成門', lat: 35.6611, lng: 139.7531 },
+                        { name: '内幸町', lat: 35.6700, lng: 139.7539 },
+                        { name: '日比谷', lat: 35.6750, lng: 139.7582 },
+                        { name: '大手町', lat: 35.6867, lng: 139.7630 },
+                        { name: '神保町', lat: 35.6958, lng: 139.7578 },
+                        { name: '水道橋', lat: 35.7019, lng: 139.7536 },
+                        { name: '春日', lat: 35.7086, lng: 139.7508 },
+                        { name: '白山', lat: 35.7181, lng: 139.7522 },
+                        { name: '千石', lat: 35.7281, lng: 139.7444 },
+                        { name: '巣鴨', lat: 35.7339, lng: 139.7394 },
+                        { name: '西巣鴨', lat: 35.7408, lng: 139.7292 },
+                        { name: '新板橋', lat: 35.7486, lng: 139.7194 },
+                        { name: '板橋区役所前', lat: 35.7561, lng: 139.7106 },
+                        { name: '板橋本町', lat: 35.7656, lng: 139.7022 },
+                        { name: '本蓮沼', lat: 35.7739, lng: 139.6972 },
+                        { name: '志村坂上', lat: 35.7817, lng: 139.6894 },
+                        { name: '志村三丁目', lat: 35.7883, lng: 139.6803 },
+                        { name: '蓮根', lat: 35.7944, lng: 139.6722 },
+                        { name: '西台', lat: 35.7978, lng: 139.6619 },
+                        { name: '高島平', lat: 35.8000, lng: 139.6506 },
+                        { name: '新高島平', lat: 35.7989, lng: 139.6389 },
+                        { name: '西高島平', lat: 35.7986, lng: 139.6269 },
+                    ]
+                },
+                shinjuku: {
+                    name: '新宿線',
+                    color: '#6CBB5A',
+                    avgTime: 2,
+                    stations: [
+                        { name: '新宿', lat: 35.6896, lng: 139.6994 },
+                        { name: '新宿三丁目', lat: 35.6880, lng: 139.7087 },
+                        { name: '曙橋', lat: 35.6914, lng: 139.7244 },
+                        { name: '市ヶ谷', lat: 35.6914, lng: 139.7436 },
+                        { name: '九段下', lat: 35.6955, lng: 139.7513 },
+                        { name: '神保町', lat: 35.6958, lng: 139.7578 },
+                        { name: '小川町', lat: 35.6961, lng: 139.7656 },
+                        { name: '岩本町', lat: 35.6953, lng: 139.7761 },
+                        { name: '馬喰横山', lat: 35.6914, lng: 139.7839 },
+                        { name: '浜町', lat: 35.6886, lng: 139.7894 },
+                        { name: '森下', lat: 35.6883, lng: 139.7978 },
+                        { name: '菊川', lat: 35.6878, lng: 139.8072 },
+                        { name: '住吉', lat: 35.6858, lng: 139.8153 },
+                        { name: '西大島', lat: 35.6867, lng: 139.8269 },
+                        { name: '大島', lat: 35.6867, lng: 139.8397 },
+                        { name: '東大島', lat: 35.6903, lng: 139.8519 },
+                        { name: '船堀', lat: 35.6833, lng: 139.8697 },
+                        { name: '一之江', lat: 35.6756, lng: 139.8822 },
+                        { name: '瑞江', lat: 35.6719, lng: 139.8942 },
+                        { name: '篠崎', lat: 35.6722, lng: 139.9117 },
+                        { name: '本八幡', lat: 35.7203, lng: 139.9244 },
+                    ]
+                },
+                oedo: {
+                    name: '大江戸線',
+                    color: '#B6007A',
+                    avgTime: 2,
+                    isLoop: true,
+                    stations: [
+                        { name: '都庁前', lat: 35.6911, lng: 139.6919 },
+                        { name: '新宿西口', lat: 35.6925, lng: 139.6989 },
+                        { name: '東新宿', lat: 35.6997, lng: 139.7125 },
+                        { name: '若松河田', lat: 35.7019, lng: 139.7222 },
+                        { name: '牛込柳町', lat: 35.6994, lng: 139.7322 },
+                        { name: '牛込神楽坂', lat: 35.6997, lng: 139.7383 },
+                        { name: '飯田橋', lat: 35.7014, lng: 139.7452 },
+                        { name: '春日', lat: 35.7086, lng: 139.7508 },
+                        { name: '本郷三丁目', lat: 35.7067, lng: 139.7598 },
+                        { name: '上野御徒町', lat: 35.7044, lng: 139.7736 },
+                        { name: '新御徒町', lat: 35.7042, lng: 139.7822 },
+                        { name: '蔵前', lat: 35.7033, lng: 139.7906 },
+                        { name: '両国', lat: 35.6964, lng: 139.7936 },
+                        { name: '森下', lat: 35.6883, lng: 139.7978 },
+                        { name: '清澄白河', lat: 35.6808, lng: 139.8008 },
+                        { name: '門前仲町', lat: 35.6730, lng: 139.7953 },
+                        { name: '月島', lat: 35.6625, lng: 139.7856 },
+                        { name: '勝どき', lat: 35.6572, lng: 139.7772 },
+                        { name: '築地市場', lat: 35.6622, lng: 139.7694 },
+                        { name: '汐留', lat: 35.6611, lng: 139.7614 },
+                        { name: '大門', lat: 35.6567, lng: 139.7536 },
+                        { name: '赤羽橋', lat: 35.6536, lng: 139.7456 },
+                        { name: '麻布十番', lat: 35.6558, lng: 139.7372 },
+                        { name: '六本木', lat: 35.6629, lng: 139.7314 },
+                        { name: '青山一丁目', lat: 35.6723, lng: 139.7234 },
+                        { name: '国立競技場', lat: 35.6797, lng: 139.7144 },
+                        { name: '代々木', lat: 35.6839, lng: 139.7019 },
+                        { name: '新宿', lat: 35.6896, lng: 139.6994 },
+                        { name: '都庁前', lat: 35.6911, lng: 139.6919 },
+                        { name: '西新宿五丁目', lat: 35.6956, lng: 139.6844 },
+                        { name: '中野坂上', lat: 35.6975, lng: 139.6758 },
+                        { name: '東中野', lat: 35.7069, lng: 139.6794 },
+                        { name: '中井', lat: 35.7150, lng: 139.6847 },
+                        { name: '落合南長崎', lat: 35.7258, lng: 139.6856 },
+                        { name: '新江古田', lat: 35.7344, lng: 139.6747 },
+                        { name: '練馬', lat: 35.7378, lng: 139.6536 },
+                        { name: '豊島園', lat: 35.7428, lng: 139.6378 },
+                        { name: '練馬春日町', lat: 35.7458, lng: 139.6236 },
+                        { name: '光が丘', lat: 35.7589, lng: 139.6231 },
+                    ]
+                }
+            },
+
+            // JR東日本
+            jr: {
+                yamanote: {
+                    name: '山手線',
+                    color: '#9ACD32',
+                    avgTime: 2.5,
+                    isLoop: true,
+                    stations: [
+                        { name: '東京', lat: 35.6819, lng: 139.7649 },
+                        { name: '神田', lat: 35.6917, lng: 139.7703 },
+                        { name: '秋葉原', lat: 35.6984, lng: 139.7731 },
+                        { name: '御徒町', lat: 35.7044, lng: 139.7736 },
+                        { name: '上野', lat: 35.7141, lng: 139.7773 },
+                        { name: '鶯谷', lat: 35.7208, lng: 139.7781 },
+                        { name: '日暮里', lat: 35.7281, lng: 139.7706 },
+                        { name: '西日暮里', lat: 35.7319, lng: 139.7672 },
+                        { name: '田端', lat: 35.7378, lng: 139.7608 },
+                        { name: '駒込', lat: 35.7361, lng: 139.7478 },
+                        { name: '巣鴨', lat: 35.7339, lng: 139.7394 },
+                        { name: '大塚', lat: 35.7317, lng: 139.7281 },
+                        { name: '池袋', lat: 35.7283, lng: 139.7102 },
+                        { name: '目白', lat: 35.7214, lng: 139.7061 },
+                        { name: '高田馬場', lat: 35.7127, lng: 139.7036 },
+                        { name: '新大久保', lat: 35.7011, lng: 139.7000 },
+                        { name: '新宿', lat: 35.6896, lng: 139.6994 },
+                        { name: '代々木', lat: 35.6839, lng: 139.7019 },
+                        { name: '原宿', lat: 35.6703, lng: 139.7031 },
+                        { name: '渋谷', lat: 35.6590, lng: 139.7020 },
+                        { name: '恵比寿', lat: 35.6467, lng: 139.7108 },
+                        { name: '目黒', lat: 35.6336, lng: 139.7158 },
+                        { name: '五反田', lat: 35.6258, lng: 139.7236 },
+                        { name: '大崎', lat: 35.6197, lng: 139.7286 },
+                        { name: '品川', lat: 35.6308, lng: 139.7392 },
+                        { name: '高輪ゲートウェイ', lat: 35.6353, lng: 139.7406 },
+                        { name: '田町', lat: 35.6456, lng: 139.7475 },
+                        { name: '浜松町', lat: 35.6553, lng: 139.7572 },
+                        { name: '新橋', lat: 35.6658, lng: 139.7594 },
+                        { name: '有楽町', lat: 35.6750, lng: 139.7600 },
+                        { name: '東京', lat: 35.6819, lng: 139.7649 },
+                    ]
+                },
+                chuoRapid: {
+                    name: '中央線快速',
+                    color: '#FF4500',
+                    avgTime: 3,
+                    stations: [
+                        { name: '東京', lat: 35.6819, lng: 139.7649 },
+                        { name: '神田', lat: 35.6917, lng: 139.7703 },
+                        { name: '御茶ノ水', lat: 35.6998, lng: 139.7651 },
+                        { name: '四ツ谷', lat: 35.6860, lng: 139.7300 },
+                        { name: '新宿', lat: 35.6896, lng: 139.6994 },
+                        { name: '中野', lat: 35.7065, lng: 139.6658 },
+                        { name: '高円寺', lat: 35.7053, lng: 139.6497 },
+                        { name: '阿佐ヶ谷', lat: 35.7042, lng: 139.6353 },
+                        { name: '荻窪', lat: 35.7034, lng: 139.6196 },
+                        { name: '西荻窪', lat: 35.7031, lng: 139.5994 },
+                        { name: '吉祥寺', lat: 35.7033, lng: 139.5794 },
+                        { name: '三鷹', lat: 35.7028, lng: 139.5606 },
+                        { name: '武蔵境', lat: 35.7017, lng: 139.5436 },
+                        { name: '東小金井', lat: 35.7011, lng: 139.5264 },
+                        { name: '武蔵小金井', lat: 35.7006, lng: 139.5067 },
+                        { name: '国分寺', lat: 35.7006, lng: 139.4808 },
+                        { name: '西国分寺', lat: 35.6994, lng: 139.4636 },
+                        { name: '国立', lat: 35.6994, lng: 139.4439 },
+                        { name: '立川', lat: 35.6972, lng: 139.4142 },
+                    ]
+                },
+                keihinTohoku: {
+                    name: '京浜東北線',
+                    color: '#00BFFF',
+                    avgTime: 2.5,
+                    stations: [
+                        { name: '大宮', lat: 35.9064, lng: 139.6231 },
+                        { name: 'さいたま新都心', lat: 35.8939, lng: 139.6319 },
+                        { name: '与野', lat: 35.8789, lng: 139.6311 },
+                        { name: '北浦和', lat: 35.8656, lng: 139.6311 },
+                        { name: '浦和', lat: 35.8583, lng: 139.6567 },
+                        { name: '南浦和', lat: 35.8472, lng: 139.6697 },
+                        { name: '蕨', lat: 35.8264, lng: 139.6833 },
+                        { name: '西川口', lat: 35.8100, lng: 139.7067 },
+                        { name: '川口', lat: 35.8017, lng: 139.7203 },
+                        { name: '赤羽', lat: 35.7778, lng: 139.7208 },
+                        { name: '東十条', lat: 35.7625, lng: 139.7239 },
+                        { name: '王子', lat: 35.7536, lng: 139.7381 },
+                        { name: '上中里', lat: 35.7475, lng: 139.7475 },
+                        { name: '田端', lat: 35.7378, lng: 139.7608 },
+                        { name: '西日暮里', lat: 35.7319, lng: 139.7672 },
+                        { name: '日暮里', lat: 35.7281, lng: 139.7706 },
+                        { name: '鶯谷', lat: 35.7208, lng: 139.7781 },
+                        { name: '上野', lat: 35.7141, lng: 139.7773 },
+                        { name: '御徒町', lat: 35.7044, lng: 139.7736 },
+                        { name: '秋葉原', lat: 35.6984, lng: 139.7731 },
+                        { name: '神田', lat: 35.6917, lng: 139.7703 },
+                        { name: '東京', lat: 35.6819, lng: 139.7649 },
+                        { name: '有楽町', lat: 35.6750, lng: 139.7600 },
+                        { name: '新橋', lat: 35.6658, lng: 139.7594 },
+                        { name: '浜松町', lat: 35.6553, lng: 139.7572 },
+                        { name: '田町', lat: 35.6456, lng: 139.7475 },
+                        { name: '高輪ゲートウェイ', lat: 35.6353, lng: 139.7406 },
+                        { name: '品川', lat: 35.6308, lng: 139.7392 },
+                        { name: '大井町', lat: 35.6072, lng: 139.7347 },
+                        { name: '大森', lat: 35.5883, lng: 139.7286 },
+                        { name: '蒲田', lat: 35.5625, lng: 139.7158 },
+                    ]
+                },
+                sobu: {
+                    name: '総武線各停',
+                    color: '#FFD700',
+                    avgTime: 2,
+                    stations: [
+                        { name: '三鷹', lat: 35.7028, lng: 139.5606 },
+                        { name: '吉祥寺', lat: 35.7033, lng: 139.5794 },
+                        { name: '西荻窪', lat: 35.7031, lng: 139.5994 },
+                        { name: '荻窪', lat: 35.7034, lng: 139.6196 },
+                        { name: '阿佐ヶ谷', lat: 35.7042, lng: 139.6353 },
+                        { name: '高円寺', lat: 35.7053, lng: 139.6497 },
+                        { name: '中野', lat: 35.7065, lng: 139.6658 },
+                        { name: '東中野', lat: 35.7069, lng: 139.6794 },
+                        { name: '大久保', lat: 35.7011, lng: 139.6908 },
+                        { name: '新宿', lat: 35.6896, lng: 139.6994 },
+                        { name: '代々木', lat: 35.6839, lng: 139.7019 },
+                        { name: '千駄ヶ谷', lat: 35.6797, lng: 139.7144 },
+                        { name: '信濃町', lat: 35.6803, lng: 139.7203 },
+                        { name: '四ツ谷', lat: 35.6860, lng: 139.7300 },
+                        { name: '市ケ谷', lat: 35.6914, lng: 139.7436 },
+                        { name: '飯田橋', lat: 35.7014, lng: 139.7452 },
+                        { name: '水道橋', lat: 35.7019, lng: 139.7536 },
+                        { name: '御茶ノ水', lat: 35.6998, lng: 139.7651 },
+                        { name: '秋葉原', lat: 35.6984, lng: 139.7731 },
+                        { name: '浅草橋', lat: 35.6972, lng: 139.7883 },
+                        { name: '両国', lat: 35.6964, lng: 139.7936 },
+                        { name: '錦糸町', lat: 35.6964, lng: 139.8142 },
+                        { name: '亀戸', lat: 35.6972, lng: 139.8267 },
+                        { name: '平井', lat: 35.7072, lng: 139.8439 },
+                        { name: '新小岩', lat: 35.7167, lng: 139.8581 },
+                    ]
+                },
+                saikyo: {
+                    name: '埼京線',
+                    color: '#00AC9B',
+                    avgTime: 2.5,
+                    stations: [
+                        { name: '大崎', lat: 35.6197, lng: 139.7286 },
+                        { name: '恵比寿', lat: 35.6467, lng: 139.7108 },
+                        { name: '渋谷', lat: 35.6590, lng: 139.7020 },
+                        { name: '新宿', lat: 35.6896, lng: 139.6994 },
+                        { name: '池袋', lat: 35.7283, lng: 139.7102 },
+                        { name: '板橋', lat: 35.7514, lng: 139.7203 },
+                        { name: '十条', lat: 35.7639, lng: 139.7219 },
+                        { name: '赤羽', lat: 35.7778, lng: 139.7208 },
+                        { name: '北赤羽', lat: 35.7867, lng: 139.7089 },
+                        { name: '浮間舟渡', lat: 35.7939, lng: 139.6978 },
+                        { name: '戸田公園', lat: 35.8047, lng: 139.6803 },
+                        { name: '戸田', lat: 35.8119, lng: 139.6719 },
+                        { name: '北戸田', lat: 35.8200, lng: 139.6644 },
+                        { name: '武蔵浦和', lat: 35.8344, lng: 139.6486 },
+                        { name: '中浦和', lat: 35.8447, lng: 139.6353 },
+                        { name: '南与野', lat: 35.8550, lng: 139.6275 },
+                        { name: '与野本町', lat: 35.8656, lng: 139.6247 },
+                        { name: '北与野', lat: 35.8831, lng: 139.6275 },
+                        { name: '大宮', lat: 35.9064, lng: 139.6231 },
+                    ]
+                }
+            },
+
+            // 私鉄
+            private: {
+                tokyu_toyoko: {
+                    name: '東急東横線',
+                    color: '#EE3C3C',
+                    avgTime: 2,
+                    stations: [
+                        { name: '渋谷', lat: 35.6590, lng: 139.7020 },
+                        { name: '代官山', lat: 35.6489, lng: 139.7031 },
+                        { name: '中目黒', lat: 35.6440, lng: 139.6988 },
+                        { name: '祐天寺', lat: 35.6364, lng: 139.6897 },
+                        { name: '学芸大学', lat: 35.6283, lng: 139.6853 },
+                        { name: '都立大学', lat: 35.6175, lng: 139.6789 },
+                        { name: '自由が丘', lat: 35.6072, lng: 139.6703 },
+                        { name: '田園調布', lat: 35.5992, lng: 139.6681 },
+                        { name: '多摩川', lat: 35.5894, lng: 139.6683 },
+                        { name: '新丸子', lat: 35.5808, lng: 139.6614 },
+                        { name: '武蔵小杉', lat: 35.5769, lng: 139.6583 },
+                        { name: '元住吉', lat: 35.5672, lng: 139.6536 },
+                        { name: '日吉', lat: 35.5536, lng: 139.6472 },
+                        { name: '綱島', lat: 35.5378, lng: 139.6350 },
+                        { name: '大倉山', lat: 35.5244, lng: 139.6264 },
+                        { name: '菊名', lat: 35.5100, lng: 139.6183 },
+                        { name: '妙蓮寺', lat: 35.4961, lng: 139.6161 },
+                        { name: '白楽', lat: 35.4883, lng: 139.6169 },
+                        { name: '東白楽', lat: 35.4833, lng: 139.6233 },
+                        { name: '反町', lat: 35.4761, lng: 139.6286 },
+                        { name: '横浜', lat: 35.4667, lng: 139.6231 },
+                    ]
+                },
+                odakyu: {
+                    name: '小田急線',
+                    color: '#1E90FF',
+                    avgTime: 2.5,
+                    stations: [
+                        { name: '新宿', lat: 35.6896, lng: 139.6994 },
+                        { name: '南新宿', lat: 35.6869, lng: 139.6972 },
+                        { name: '参宮橋', lat: 35.6825, lng: 139.6908 },
+                        { name: '代々木八幡', lat: 35.6694, lng: 139.6864 },
+                        { name: '代々木上原', lat: 35.6683, lng: 139.6778 },
+                        { name: '東北沢', lat: 35.6636, lng: 139.6722 },
+                        { name: '下北沢', lat: 35.6611, lng: 139.6669 },
+                        { name: '世田谷代田', lat: 35.6575, lng: 139.6606 },
+                        { name: '梅ヶ丘', lat: 35.6536, lng: 139.6508 },
+                        { name: '豪徳寺', lat: 35.6492, lng: 139.6444 },
+                        { name: '経堂', lat: 35.6456, lng: 139.6353 },
+                        { name: '千歳船橋', lat: 35.6411, lng: 139.6231 },
+                        { name: '祖師ヶ谷大蔵', lat: 35.6372, lng: 139.6125 },
+                        { name: '成城学園前', lat: 35.6347, lng: 139.6011 },
+                        { name: '喜多見', lat: 35.6331, lng: 139.5897 },
+                        { name: '狛江', lat: 35.6317, lng: 139.5775 },
+                        { name: '和泉多摩川', lat: 35.6308, lng: 139.5658 },
+                        { name: '登戸', lat: 35.6286, lng: 139.5642 },
+                    ]
+                },
+                keio: {
+                    name: '京王線',
+                    color: '#DD0077',
+                    avgTime: 2,
+                    stations: [
+                        { name: '新宿', lat: 35.6896, lng: 139.6994 },
+                        { name: '笹塚', lat: 35.6742, lng: 139.6669 },
+                        { name: '代田橋', lat: 35.6675, lng: 139.6583 },
+                        { name: '明大前', lat: 35.6664, lng: 139.6483 },
+                        { name: '下高井戸', lat: 35.6656, lng: 139.6381 },
+                        { name: '桜上水', lat: 35.6672, lng: 139.6256 },
+                        { name: '上北沢', lat: 35.6694, lng: 139.6139 },
+                        { name: '八幡山', lat: 35.6694, lng: 139.6056 },
+                        { name: '芦花公園', lat: 35.6692, lng: 139.5986 },
+                        { name: '千歳烏山', lat: 35.6700, lng: 139.5892 },
+                        { name: '仙川', lat: 35.6700, lng: 139.5731 },
+                        { name: 'つつじヶ丘', lat: 35.6644, lng: 139.5594 },
+                        { name: '柴崎', lat: 35.6597, lng: 139.5492 },
+                        { name: '国領', lat: 35.6564, lng: 139.5408 },
+                        { name: '布田', lat: 35.6531, lng: 139.5358 },
+                        { name: '調布', lat: 35.6517, lng: 139.5433 },
+                    ]
+                },
+                seibu_ikebukuro: {
+                    name: '西武池袋線',
+                    color: '#0068B7',
+                    avgTime: 2.5,
+                    stations: [
+                        { name: '池袋', lat: 35.7283, lng: 139.7102 },
+                        { name: '椎名町', lat: 35.7272, lng: 139.6953 },
+                        { name: '東長崎', lat: 35.7294, lng: 139.6858 },
+                        { name: '江古田', lat: 35.7350, lng: 139.6772 },
+                        { name: '桜台', lat: 35.7378, lng: 139.6675 },
+                        { name: '練馬', lat: 35.7378, lng: 139.6536 },
+                        { name: '中村橋', lat: 35.7358, lng: 139.6369 },
+                        { name: '富士見台', lat: 35.7331, lng: 139.6264 },
+                        { name: '練馬高野台', lat: 35.7314, lng: 139.6144 },
+                        { name: '石神井公園', lat: 35.7381, lng: 139.5997 },
+                        { name: '大泉学園', lat: 35.7478, lng: 139.5803 },
+                        { name: '保谷', lat: 35.7550, lng: 139.5611 },
+                        { name: 'ひばりヶ丘', lat: 35.7550, lng: 139.5397 },
+                        { name: '東久留米', lat: 35.7544, lng: 139.5197 },
+                        { name: '清瀬', lat: 35.7583, lng: 139.5053 },
+                        { name: '秋津', lat: 35.7647, lng: 139.4931 },
+                        { name: '所沢', lat: 35.7861, lng: 139.4681 },
+                    ]
+                },
+                tobu_tojo: {
+                    name: '東武東上線',
+                    color: '#0068B7',
+                    avgTime: 2.5,
+                    stations: [
+                        { name: '池袋', lat: 35.7283, lng: 139.7102 },
+                        { name: '北池袋', lat: 35.7347, lng: 139.7103 },
+                        { name: '下板橋', lat: 35.7414, lng: 139.7097 },
+                        { name: '大山', lat: 35.7475, lng: 139.7019 },
+                        { name: '中板橋', lat: 35.7550, lng: 139.6969 },
+                        { name: 'ときわ台', lat: 35.7622, lng: 139.6892 },
+                        { name: '上板橋', lat: 35.7683, lng: 139.6817 },
+                        { name: '東武練馬', lat: 35.7753, lng: 139.6742 },
+                        { name: '下赤塚', lat: 35.7808, lng: 139.6617 },
+                        { name: '成増', lat: 35.7814, lng: 139.6400 },
+                        { name: '和光市', lat: 35.7878, lng: 139.6214 },
+                        { name: '朝霞', lat: 35.7961, lng: 139.5981 },
+                        { name: '朝霞台', lat: 35.8008, lng: 139.5831 },
+                        { name: '志木', lat: 35.8061, lng: 139.5672 },
+                    ]
+                },
+                keikyu: {
+                    name: '京急線',
+                    color: '#EE1133',
+                    avgTime: 2,
+                    stations: [
+                        { name: '泉岳寺', lat: 35.6403, lng: 139.7408 },
+                        { name: '品川', lat: 35.6308, lng: 139.7392 },
+                        { name: '北品川', lat: 35.6228, lng: 139.7406 },
+                        { name: '新馬場', lat: 35.6153, lng: 139.7419 },
+                        { name: '青物横丁', lat: 35.6081, lng: 139.7433 },
+                        { name: '鮫洲', lat: 35.6008, lng: 139.7433 },
+                        { name: '立会川', lat: 35.5942, lng: 139.7414 },
+                        { name: '大森海岸', lat: 35.5867, lng: 139.7356 },
+                        { name: '平和島', lat: 35.5792, lng: 139.7364 },
+                        { name: '大森町', lat: 35.5711, lng: 139.7289 },
+                        { name: '梅屋敷', lat: 35.5631, lng: 139.7244 },
+                        { name: '京急蒲田', lat: 35.5575, lng: 139.7214 },
+                        { name: '雑色', lat: 35.5453, lng: 139.7103 },
+                        { name: '六郷土手', lat: 35.5339, lng: 139.7014 },
+                        { name: '京急川崎', lat: 35.5311, lng: 139.6986 },
+                    ]
+                },
+                tx: {
+                    name: 'つくばエクスプレス',
+                    color: '#2E8B57',
+                    avgTime: 3,
+                    stations: [
+                        { name: '秋葉原', lat: 35.6984, lng: 139.7731 },
+                        { name: '新御徒町', lat: 35.7042, lng: 139.7822 },
+                        { name: '浅草', lat: 35.7112, lng: 139.7964 },
+                        { name: '南千住', lat: 35.7324, lng: 139.8007 },
+                        { name: '北千住', lat: 35.7497, lng: 139.8047 },
+                        { name: '青井', lat: 35.7647, lng: 139.8275 },
+                        { name: '六町', lat: 35.7731, lng: 139.8378 },
+                        { name: '八潮', lat: 35.8194, lng: 139.8389 },
+                        { name: '三郷中央', lat: 35.8386, lng: 139.8672 },
+                        { name: '南流山', lat: 35.8497, lng: 139.8986 },
+                        { name: '流山セントラルパーク', lat: 35.8625, lng: 139.9158 },
+                        { name: '流山おおたかの森', lat: 35.8722, lng: 139.9281 },
+                    ]
+                }
+            },
+
+            // 新幹線
+            shinkansen: {
+                tokaido: {
+                    name: '東海道新幹線',
+                    color: '#0066CC',
+                    avgTime: 15,
+                    stations: [
+                        { name: '東京', lat: 35.6819, lng: 139.7649 },
+                        { name: '品川', lat: 35.6308, lng: 139.7392 },
+                        { name: '新横浜', lat: 35.5067, lng: 139.6181 },
+                        { name: '小田原', lat: 35.2564, lng: 139.1553 },
+                        { name: '熱海', lat: 35.1042, lng: 139.0775 },
+                        { name: '三島', lat: 35.1269, lng: 138.9106 },
+                        { name: '新富士', lat: 35.1417, lng: 138.6703 },
+                        { name: '静岡', lat: 34.9719, lng: 138.3889 },
+                        { name: '掛川', lat: 34.7683, lng: 137.9986 },
+                        { name: '浜松', lat: 34.7036, lng: 137.7344 },
+                        { name: '豊橋', lat: 34.7631, lng: 137.3819 },
+                        { name: '三河安城', lat: 34.9589, lng: 137.0611 },
+                        { name: '名古屋', lat: 35.1706, lng: 136.8819 },
+                        { name: '岐阜羽島', lat: 35.3164, lng: 136.6869 },
+                        { name: '米原', lat: 35.3147, lng: 136.2900 },
+                        { name: '京都', lat: 34.9858, lng: 135.7589 },
+                        { name: '新大阪', lat: 34.7336, lng: 135.5003 },
+                    ]
+                },
+                tohoku: {
+                    name: '東北新幹線',
+                    color: '#00994C',
+                    avgTime: 20,
+                    stations: [
+                        { name: '東京', lat: 35.6819, lng: 139.7649 },
+                        { name: '上野', lat: 35.7141, lng: 139.7773 },
+                        { name: '大宮', lat: 35.9064, lng: 139.6231 },
+                        { name: '小山', lat: 36.3147, lng: 139.8011 },
+                        { name: '宇都宮', lat: 36.5589, lng: 139.8983 },
+                        { name: '那須塩原', lat: 36.9614, lng: 140.0467 },
+                        { name: '新白河', lat: 37.1250, lng: 140.2122 },
+                        { name: '郡山', lat: 37.3981, lng: 140.3883 },
+                        { name: '福島', lat: 37.7544, lng: 140.4600 },
+                        { name: '白石蔵王', lat: 38.0017, lng: 140.6203 },
+                        { name: '仙台', lat: 38.2603, lng: 140.8822 },
+                        { name: '古川', lat: 38.6047, lng: 140.9733 },
+                        { name: '一ノ関', lat: 38.9344, lng: 141.1264 },
+                        { name: '水沢江刺', lat: 39.1156, lng: 141.1403 },
+                        { name: '北上', lat: 39.2856, lng: 141.1125 },
+                        { name: '新花巻', lat: 39.3839, lng: 141.1094 },
+                        { name: '盛岡', lat: 39.7017, lng: 141.1361 },
+                    ]
+                },
+                joetsu: {
+                    name: '上越新幹線',
+                    color: '#E6007E',
+                    avgTime: 15,
+                    stations: [
+                        { name: '東京', lat: 35.6819, lng: 139.7649 },
+                        { name: '上野', lat: 35.7141, lng: 139.7773 },
+                        { name: '大宮', lat: 35.9064, lng: 139.6231 },
+                        { name: '熊谷', lat: 36.1478, lng: 139.3889 },
+                        { name: '本庄早稲田', lat: 36.2397, lng: 139.1689 },
+                        { name: '高崎', lat: 36.3222, lng: 139.0106 },
+                        { name: '上毛高原', lat: 36.6381, lng: 138.9536 },
+                        { name: '越後湯沢', lat: 36.9314, lng: 138.8150 },
+                        { name: '浦佐', lat: 37.0783, lng: 138.9600 },
+                        { name: '長岡', lat: 37.4464, lng: 138.8500 },
+                        { name: '燕三条', lat: 37.6317, lng: 138.9336 },
+                        { name: '新潟', lat: 37.9125, lng: 139.0619 },
+                    ]
+                }
+            }
+        };
+
+        // 航空路線と空港
+        const airports = {
+            haneda: { name: '羽田空港', lat: 35.5494, lng: 139.7798 },
+            narita: { name: '成田空港', lat: 35.7720, lng: 140.3929 },
+            chitose: { name: '新千歳空港', lat: 42.7752, lng: 141.6924 },
+            itami: { name: '伊丹空港', lat: 34.7854, lng: 135.4383 },
+            kansai: { name: '関西空港', lat: 34.4320, lng: 135.2304 },
+            fukuoka: { name: '福岡空港', lat: 33.5850, lng: 130.4514 },
+            naha: { name: '那覇空港', lat: 26.1958, lng: 127.6459 },
+            chubu: { name: '中部空港', lat: 34.8583, lng: 136.8054 },
+        };
+
+        const airRoutes = [
+            { from: 'haneda', to: 'chitose', flightTime: 90 },
+            { from: 'haneda', to: 'itami', flightTime: 65 },
+            { from: 'haneda', to: 'fukuoka', flightTime: 100 },
+            { from: 'haneda', to: 'naha', flightTime: 150 },
+            { from: 'narita', to: 'chitose', flightTime: 95 },
+            { from: 'narita', to: 'fukuoka', flightTime: 110 },
+            { from: 'haneda', to: 'kansai', flightTime: 70 },
+            { from: 'haneda', to: 'chubu', flightTime: 60 },
+        ];
+
+        // ========================================
+        // ユーティリティ関数
+        // ========================================
+        
+        // 2点間の距離（km）
+        function getDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLng = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLng/2) * Math.sin(dLng/2);
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // 路線の総距離（km）
+        function getRouteDistance(stations) {
+            let total = 0;
+            for (let i = 0; i < stations.length - 1; i++) {
+                total += getDistance(
+                    stations[i].lat, stations[i].lng,
+                    stations[i+1].lat, stations[i+1].lng
+                );
+            }
+            return total;
+        }
+
+        // ========================================
+        // 路線リスト生成
+        // ========================================
+        function generateLineList() {
+            const container = document.getElementById('lineList');
+            let html = '';
+            
+            const categories = [
+                { key: 'metro', data: railwayData.metro, label: '🚇 東京メトロ' },
+                { key: 'toei', data: railwayData.toei, label: '🚈 都営地下鉄' },
+                { key: 'jr', data: railwayData.jr, label: '🚃 JR東日本' },
+                { key: 'private', data: railwayData.private, label: '🚋 私鉄' },
+                { key: 'shinkansen', data: railwayData.shinkansen, label: '🚅 新幹線' },
+            ];
+
+            categories.forEach(cat => {
+                html += `<div class="font-bold text-gray-700 mt-2 mb-1 text-xs">${cat.label}</div>`;
+                for (const [key, line] of Object.entries(cat.data)) {
+                    const lineId = `${cat.key}_${key}`;
+                    lineVisibility[lineId] = true;
+                    html += createLineItem(lineId, line.name, line.color);
+                }
+            });
+            
+            // 飛行機
+            lineVisibility['airplane'] = true;
+            html += '<div class="font-bold text-gray-700 mt-2 mb-1 text-xs">✈️ 航空路線</div>';
+            html += createLineItem('airplane', '国内線', '#FF8C00');
+            
+            container.innerHTML = html;
+            
+            // イベントリスナー
+            document.querySelectorAll('.line-toggle').forEach(el => {
+                el.addEventListener('change', (e) => {
+                    lineVisibility[e.target.dataset.line] = e.target.checked;
+                    updateVisibility();
+                });
+            });
+        }
+
+        function createLineItem(id, name, color) {
+            return `
+                <label class="line-item flex items-center gap-2 p-1 rounded cursor-pointer">
+                    <input type="checkbox" class="line-toggle w-3 h-3" data-line="${id}" checked>
+                    <div class="w-3 h-3 rounded-full" style="background:${color}"></div>
+                    <span class="text-gray-600 text-xs">${name}</span>
+                </label>
+            `;
+        }
+
+        // ========================================
+        // 路線描画
+        // ========================================
+        function drawRoutes() {
+            const categories = ['metro', 'toei', 'jr', 'private', 'shinkansen'];
+            
+            categories.forEach(cat => {
+                for (const [key, line] of Object.entries(railwayData[cat])) {
+                    const coords = line.stations.map(s => [s.lat, s.lng]);
+                    const weight = cat === 'shinkansen' ? 4 : 3;
+                    const polyline = L.polyline(coords, {
+                        color: line.color,
+                        weight: weight,
+                        opacity: 0.7
+                    }).addTo(map);
+                    routeLines[`${cat}_${key}`] = polyline;
+                }
+            });
+            
+            // 航空路線（点線）
+            const airPolylines = [];
+            airRoutes.forEach(route => {
+                const from = airports[route.from];
+                const to = airports[route.to];
+                const polyline = L.polyline([[from.lat, from.lng], [to.lat, to.lng]], {
+                    color: '#FF8C00',
+                    weight: 2,
+                    opacity: 0.3,
+                    dashArray: '10, 10'
+                }).addTo(map);
+                airPolylines.push(polyline);
+            });
+            routeLines['airplane'] = airPolylines;
+        }
+
+        // ========================================
+        // 車両生成（現実的な速度計算）
+        // ========================================
+        function generateVehicles() {
+            vehicles = [];
+            const categories = ['metro', 'toei', 'jr', 'private', 'shinkansen'];
+            const emojis = { metro: '🚇', toei: '🚈', jr: '🚃', private: '🚋', shinkansen: '🚅' };
+            
+            categories.forEach(cat => {
+                for (const [key, line] of Object.entries(railwayData[cat])) {
+                    const lineId = `${cat}_${key}`;
+                    const routeDistance = getRouteDistance(line.stations);
+                    const speed = CONFIG.speeds[cat]; // km/h
+                    
+                    // 1往復にかかる時間（分）
+                    const tripTimeMinutes = (routeDistance / speed) * 60 * 2;
+                    
+                    // 路線に配置する車両数（約5分間隔）
+                    const numTrains = Math.max(4, Math.floor(tripTimeMinutes / 5));
+                    
+                    for (let i = 0; i < numTrains; i++) {
+                        const progress = i / numTrains;
+                        const direction = (i % 2 === 0) ? 1 : -1;
+                        
+                        vehicles.push({
+                            id: `${lineId}_${i}`,
+                            lineId: lineId,
+                            type: cat,
+                            name: `${line.name} ${Math.floor(Math.random() * 900) + 100}`,
+                            line: line,
+                            progress: progress,
+                            direction: direction,
+                            emoji: emojis[cat],
+                            color: line.color,
+                            routeDistance: routeDistance,
+                            speed: speed
+                        });
+                    }
+                }
+            });
+            
+            // 飛行機
+            airRoutes.forEach((route, i) => {
+                const from = airports[route.from];
+                const to = airports[route.to];
+                const distance = getDistance(from.lat, from.lng, to.lat, to.lng);
+                
+                // 往復2便ずつ
+                for (let j = 0; j < 2; j++) {
+                    vehicles.push({
+                        id: `airplane_${i}_${j}`,
+                        lineId: 'airplane',
+                        type: 'airplane',
+                        name: `${from.name}→${to.name} ${['ANA', 'JAL'][j]}${100 + i * 10 + j}`,
+                        route: [from, to],
+                        progress: Math.random(),
+                        direction: 1,
+                        emoji: '✈️',
+                        color: '#FF8C00',
+                        routeDistance: distance,
+                        speed: CONFIG.speeds.airplane,
+                        flightTime: route.flightTime
+                    });
+                    
+                    // 逆方向
+                    vehicles.push({
+                        id: `airplane_r_${i}_${j}`,
+                        lineId: 'airplane',
+                        type: 'airplane',
+                        name: `${to.name}→${from.name} ${['ANA', 'JAL'][j]}${200 + i * 10 + j}`,
+                        route: [to, from],
+                        progress: Math.random(),
+                        direction: 1,
+                        emoji: '✈️',
+                        color: '#FF8C00',
+                        routeDistance: distance,
+                        speed: CONFIG.speeds.airplane,
+                        flightTime: route.flightTime
+                    });
+                }
+            });
+        }
+
+        // ========================================
+        // 位置計算
+        // ========================================
+        function getPositionOnRoute(vehicle) {
+            let stations;
+            if (vehicle.type === 'airplane') {
+                stations = vehicle.route;
+            } else {
+                stations = vehicle.line.stations;
+            }
+            
+            const totalSegments = stations.length - 1;
+            if (totalSegments <= 0) return [stations[0].lat, stations[0].lng];
+            
+            const segmentProgress = vehicle.progress * totalSegments;
+            const segmentIndex = Math.min(Math.floor(segmentProgress), totalSegments - 1);
+            const localProgress = segmentProgress - segmentIndex;
+            
+            const start = stations[segmentIndex];
+            const end = stations[Math.min(segmentIndex + 1, stations.length - 1)];
+            
+            return [
+                start.lat + (end.lat - start.lat) * localProgress,
+                start.lng + (end.lng - start.lng) * localProgress
+            ];
+        }
+
+        // ========================================
+        // マーカー作成
+        // ========================================
+        function createMarkers() {
+            vehicles.forEach(vehicle => {
+                const position = getPositionOnRoute(vehicle);
+                const size = vehicle.type === 'airplane' ? 28 : 
+                             vehicle.type === 'shinkansen' ? 24 : 18;
+                
+                const icon = L.divIcon({
+                    html: `<div class="vehicle-icon" style="width:${size}px;height:${size}px;background:${vehicle.color};color:white;font-size:${size * 0.6}px;">${vehicle.emoji}</div>`,
+                    className: '',
+                    iconSize: [size, size],
+                    iconAnchor: [size/2, size/2]
+                });
+                
+                const marker = L.marker(position, { icon: icon }).addTo(map);
+                
+                const speedKmh = vehicle.speed;
+                marker.bindPopup(`
+                    <div class="text-center p-2">
+                        <div class="text-2xl mb-1">${vehicle.emoji}</div>
+                        <div class="font-bold text-gray-800">${vehicle.name}</div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            速度: 約${speedKmh}km/h
+                        </div>
+                        <div class="text-xs text-green-600 mt-1">● 運行中</div>
+                    </div>
+                `);
+                
+                markers[vehicle.id] = marker;
+            });
+        }
+
+        // ========================================
+        // 表示更新
+        // ========================================
+        function updateVisibility() {
+            let totalVisible = 0;
+            let visibleLines = 0;
+            
+            for (const [id, line] of Object.entries(routeLines)) {
+                if (Array.isArray(line)) {
+                    line.forEach(l => {
+                        if (lineVisibility[id]) l.addTo(map);
+                        else map.removeLayer(l);
+                    });
+                } else {
+                    if (lineVisibility[id]) {
+                        line.addTo(map);
+                        visibleLines++;
+                    } else {
+                        map.removeLayer(line);
+                    }
+                }
+            }
+            
+            vehicles.forEach(vehicle => {
+                const marker = markers[vehicle.id];
+                if (!marker) return;
+                
+                if (lineVisibility[vehicle.lineId]) {
+                    marker.addTo(map);
+                    totalVisible++;
+                } else {
+                    map.removeLayer(marker);
+                }
+            });
+            
+            document.getElementById('totalVehicles').textContent = totalVisible;
+            document.getElementById('totalLines').textContent = Object.values(lineVisibility).filter(v => v).length;
+        }
+
+        // ========================================
+        // アニメーション更新（現実的な速度）
+        // ========================================
+        function updatePositions() {
+            const now = Date.now();
+            const dt = CONFIG.updateInterval / 1000; // 秒
+            const realTimeSeconds = dt * CONFIG.timeScale;
+            
+            vehicles.forEach(vehicle => {
+                const marker = markers[vehicle.id];
+                if (!marker || !lineVisibility[vehicle.lineId]) return;
+                
+                // 1秒間に進む距離（km）
+                const distancePerSecond = vehicle.speed / 3600;
+                // 時間スケールを適用
+                const movedDistance = distancePerSecond * realTimeSeconds;
+                // 進捗率に換算
+                const progressDelta = movedDistance / vehicle.routeDistance;
+                
+                vehicle.progress += progressDelta * vehicle.direction;
+                
+                // 端に到達したら折り返し（環状線以外）
+                if (vehicle.line?.isLoop) {
+                    if (vehicle.progress >= 1) vehicle.progress = 0;
+                    if (vehicle.progress < 0) vehicle.progress = 1;
+                } else {
+                    if (vehicle.progress >= 1 || vehicle.progress <= 0) {
+                        vehicle.direction *= -1;
+                        vehicle.progress = Math.max(0, Math.min(1, vehicle.progress));
+                    }
+                }
+                
+                const pos = getPositionOnRoute(vehicle);
+                marker.setLatLng(pos);
+            });
+        }
+
+        // ========================================
+        // 時刻更新
+        // ========================================
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = 
+                now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // ========================================
+        // カテゴリ別トグル
+        // ========================================
+        function setupCategoryToggles() {
+            const toggles = {
+                'toggleAllMetro': 'metro',
+                'toggleAllToei': 'toei',
+                'toggleAllJR': 'jr',
+                'toggleAllPrivate': 'private',
+                'toggleAllShinkansen': 'shinkansen',
+            };
+            
+            for (const [btnId, prefix] of Object.entries(toggles)) {
+                document.getElementById(btnId).addEventListener('click', () => toggleCategory(prefix));
+            }
+            
+            document.getElementById('toggleAllAirplane').addEventListener('click', () => {
+                lineVisibility['airplane'] = !lineVisibility['airplane'];
+                document.querySelector(`[data-line="airplane"]`).checked = lineVisibility['airplane'];
+                updateVisibility();
+            });
+            
+            document.getElementById('hideAllLines').addEventListener('click', () => {
+                for (const key in lineVisibility) {
+                    lineVisibility[key] = false;
+                }
+                document.querySelectorAll('.line-toggle').forEach(el => el.checked = false);
+                updateVisibility();
+            });
+        }
+
+        function toggleCategory(prefix) {
+            const keys = Object.keys(lineVisibility).filter(k => k.startsWith(prefix + '_'));
+            const allOn = keys.every(k => lineVisibility[k]);
+            keys.forEach(k => {
+                lineVisibility[k] = !allOn;
+                const el = document.querySelector(`[data-line="${k}"]`);
+                if (el) el.checked = !allOn;
+            });
+            updateVisibility();
+        }
+
+        // ========================================
+        // 速度コントロール
+        // ========================================
+        document.getElementById('speedControl').addEventListener('input', (e) => {
+            CONFIG.timeScale = parseInt(e.target.value);
+            document.getElementById('speedLabel').textContent = CONFIG.timeScale + 'x';
+            document.getElementById('timeScaleInfo').textContent = 
+                CONFIG.timeScale === 1 ? '1x（リアルタイム）' : 
+                `${CONFIG.timeScale}x（${CONFIG.timeScale}分/秒）`;
+        });
+
+        // ========================================
+        // ビューリセット
+        // ========================================
+        document.getElementById('resetView').addEventListener('click', () => {
+            map.setView([35.6812, 139.7671], 12);
+        });
+
+        // ========================================
+        // 初期化
+        // ========================================
+        generateLineList();
+        drawRoutes();
+        generateVehicles();
+        createMarkers();
+        setupCategoryToggles();
+        updateVisibility();
+        updateTime();
+
+        // アニメーションループ
+        setInterval(updatePositions, CONFIG.updateInterval);
+        setInterval(updateTime, 1000);
+
+        console.log('🚃 東京交通トラッカー起動完了');
+        console.log(`📊 総車両数: ${vehicles.length}`);
+        console.log(`🛤️ 路線データ: 東京メトロ${Object.keys(railwayData.metro).length}路線、都営${Object.keys(railwayData.toei).length}路線、JR${Object.keys(railwayData.jr).length}路線、私鉄${Object.keys(railwayData.private).length}路線、新幹線${Object.keys(railwayData.shinkansen).length}路線`);
+    </script>
+</body>
+</html>

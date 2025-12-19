@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pseudo Camera Demo</title>
+    <link rel="stylesheet" href="demo/style.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Tailwind is used for some basic utility if needed, but we override with style.css mostly. Actually index-7 uses tailwind for layout. I should try to remove it or coexist. demo/style.css resets margins. -->
+    <!-- I will stick to demo/style.css and manual styles to match the demo UI -->
+    <style>
+      /* Custom overrides for the demo feeling */
+      body {
+        background: #0a0a0a;
+        color: #f5f5f5;
+      }
+
+      /* Fix container width to match demo */
+      .container {
+        max-width: 900px;
+      }
+
+      /* Canvas Styles */
+      #viewWrap {
+        position: relative;
+        width: 100%;
+        background: #000;
+        border-radius: 8px;
+        overflow: hidden;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      }
+
+      canvas#view {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      /* Hide video source */
+      video {
+        display: none;
+      }
+
+      /* Layout for 4 Dials in 2 rows */
+      .dial-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+
+      @media (max-width: 600px) {
+        .dial-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      /* Details Section */
+      .details-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        font-size: 0.9rem;
+        color: #333;
+      }
+      .details-grid label {
+        text-align: left;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Pseudo Camera Control</h1>
+
+      <!-- Preview Section -->
+      <div class="section">
+        <h3>Camera Preview</h3>
+
+        <div id="viewWrap">
+          <canvas id="view"></canvas>
+          <div
+            id="tapHint"
+            style="
+              position: absolute;
+              bottom: 10px;
+              left: 0;
+              right: 0;
+              text-align: center;
+              color: rgba(255, 255, 255, 0.7);
+              font-size: 12px;
+              pointer-events: none;
+              display: none;
+            "
+          >
+            Tap to focus
+          </div>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+          "
+        >
+          <button id="btnStart" onclick="startCamera()">Camera Start</button>
+          <button
+            id="btnStop"
+            onclick="stopCamera()"
+            style="background-color: #555"
+            disabled
+          >
+            Stop
+          </button>
+          <button
+            id="btnShot"
+            onclick="snapshotShareOrDownload()"
+            style="background-color: #008800"
+            disabled
+          >
+            Snap
+          </button>
+        </div>
+
+        <div class="status-bar" style="margin-bottom: 0; padding: 10px">
+          <div class="status-item" style="border: none">
+            <span class="status-label">Status:</span>
+            <span class="status-value" id="statusText">Ready</span>
+            <span class="status-label" style="margin-left: 20px">FPS:</span>
+            <span class="status-value" id="fpsBadge">--</span>
+          </div>
+          <div class="status-item" style="border: none">
+            <span class="status-label">Detector:</span>
+            <span class="status-value" id="supportBadge">Checking...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls Section -->
+      <div class="section">
+        <h3>Exposure Settings</h3>
+
+        <div class="dial-grid">
+          <!-- Aperture (F-Stop) -->
+          <div class="form-group">
+            <label>Aperture (F-Stop)</label>
+            <input type="hidden" id="rngF" value="2.0" />
+            <div id="f-dial-container"></div>
+          </div>
+
+          <!-- Shutter Speed -->
+          <div class="form-group">
+            <label>Shutter Speed (Motion Blur)</label>
+            <input type="hidden" id="rngShutter" value="0.72" />
+            <div id="shutter-dial-container"></div>
+          </div>
+
+          <!-- ISO -->
+          <div class="form-group">
+            <label>ISO Sensitivity</label>
+            <input type="hidden" id="rngISO" value="400" />
+            <div id="iso-dial-container"></div>
+          </div>
+
+          <!-- Focus -->
+          <div class="form-group">
+            <label>Manual Focus</label>
+            <input type="hidden" id="rngFocus" value="0.45" />
+            <div id="focus-dial-container"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced / Switches -->
+      <div class="section">
+        <h3>Options</h3>
+        <div class="form-group">
+          <div class="toggle-row" style="justify-content: center">
+            <div class="toggle-item">
+              <span class="toggle-label">Face Focus</span>
+              <input
+                type="checkbox"
+                id="chkFace"
+                checked
+                style="display: none"
+              />
+              <!-- Using the demo toggle style -->
+              <div class="switch-body" id="switch-face">
+                <div class="bezel"></div>
+                <div class="slot"></div>
+                <div class="lever on">
+                  <div class="grip"></div>
+                  <div class="grip"></div>
+                  <div class="grip"></div>
+                  <div class="indicator"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="toggle-item">
+              <span class="toggle-label">Low Power</span>
+              <input type="checkbox" id="chkLowPower" style="display: none" />
+              <div class="switch-body" id="switch-lp">
+                <div class="bezel"></div>
+                <div class="slot"></div>
+                <div class="lever off">
+                  <div class="grip"></div>
+                  <div class="grip"></div>
+                  <div class="grip"></div>
+                  <div class="indicator"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="toggle-item">
+              <span class="toggle-label">Debug</span>
+              <input type="checkbox" id="chkDebug" style="display: none" />
+              <div class="switch-body" id="switch-debug">
+                <div class="bezel"></div>
+                <div class="slot"></div>
+                <div class="lever off">
+                  <div class="grip"></div>
+                  <div class="grip"></div>
+                  <div class="grip"></div>
+                  <div class="indicator"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div
+          class="details-grid"
+          style="
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+          "
+        >
+          <label
+            >Resolution:
+            <select id="selRes">
+              <option value="320x240">Low (320x240)</option>
+              <option value="640x480" selected>Medium (640x480)</option>
+              <option value="1280x720">High (1280x720)</option>
+            </select>
+          </label>
+          <label
+            >Camera:
+            <select id="selFacing">
+              <option value="user" selected>Front</option>
+              <option value="environment">Back</option>
+            </select>
+          </label>
+          <label
+            >Feather (Edge):
+            <input
+              type="range"
+              id="rngFeather"
+              min="0.05"
+              max="1.0"
+              step="0.01"
+              value="0.55"
+          /></label>
+          <label
+            >EV (Bias):
+            <input
+              type="range"
+              id="rngEV"
+              min="-2"
+              max="2"
+              step="0.1"
+              value="0"
+          /></label>
+          <label
+            >Noise Level:
+            <input
+              type="range"
+              id="rngNoise"
+              min="0"
+              max="1"
+              step="0.01"
+              value="0.20"
+          /></label>
+        </div>
+
+        <div
+          style="
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: #666;
+            text-align: center;
+          "
+        >
+          <p>
+            Note: This is a simulation using Canvas processing. It is heavy on
+            performance.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden Video Element -->
+    <video id="video" playsinline muted></video>
+
+    <!-- JS -->
+    <script>
+      // --- UI Classes from demo/index.html ---
+
+      class DialControl {
+        constructor(containerId, options) {
+          this.container = document.getElementById(containerId);
+          if (!this.container) return;
+
+          this.options = Object.assign(
+            {
+              min: 0,
+              max: 100,
+              step: 1,
+              valueMap: null,
+              initialValue: 0,
+              tickWidth: 30,
+              labelUnit: "",
+              onUpdate: null,
+            },
+            options
+          );
+
+          this.currentValue = this.options.initialValue;
+          this.isDragging = false;
+          this.startX = 0;
+          this.currentOffset = 0;
+
+          this.render();
+          this.valueDisplay = this.container.querySelector(".number");
+          this.unitDisplay = this.container.querySelector(".unit");
+          this.drumContainer = this.container.querySelector(".drum-container");
+          this.numberLine = this.container.querySelector(".number-line");
+
+          this.initScale();
+
+          requestAnimationFrame(() => {
+            this.updatePositionFromValue(this.currentValue, false);
+          });
+
+          this.bindEvents();
+          window.addEventListener("resize", () => {
+            this.updatePositionFromValue(this.currentValue, false);
+          });
+        }
+
+        render() {
+          this.container.innerHTML = `
+                    <div class="dial-wrapper">
+                        <div class="dial-value-display">
+                            <span class="number"></span><span class="unit">${this.options.labelUnit}</span>
+                        </div>
+                        <div class="triangle-indicator">
+                            <div class="triangle"></div>
+                        </div>
+                        <div class="drum-container">
+                            <div class="drum-surface">
+                                <div class="number-line"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+        }
+
+        initScale() {
+          this.numberLine.innerHTML = "";
+          let scaleItems = [];
+          if (this.options.valueMap) {
+            scaleItems = this.options.valueMap;
+          } else {
+            for (
+              let i = this.options.min;
+              i <= this.options.max;
+              i += this.options.step
+            ) {
+              scaleItems.push({ value: parseFloat(i.toFixed(2)), label: i });
+            }
+          }
+          this.scaleItems = scaleItems;
+
+          scaleItems.forEach((item, index) => {
+            const tick = document.createElement("div");
+            tick.className = "tick";
+            tick.style.width = this.options.tickWidth + "px";
+            const tickLine = document.createElement("div");
+            tickLine.className = "tick-line";
+
+            let isMajor = false;
+            let isMedium = false;
+
+            if (this.options.valueMap) {
+              if (index === 0 || index % 5 === 0) isMajor = true;
+              else isMedium = true;
+            } else {
+              // Simple heuristic for linear
+              const idx = (item.value - this.options.min) / this.options.step;
+              if (idx % 10 === 0) isMajor = true;
+              else if (idx % 5 === 0) isMedium = true;
+            }
+
+            if (isMajor) {
+              tickLine.style.height = "40px";
+              tickLine.style.width = "2px";
+              const label = document.createElement("div");
+              label.className = "tick-label";
+              label.textContent = item.label;
+              tick.appendChild(tickLine);
+              tick.appendChild(label);
+            } else if (isMedium) {
+              tickLine.style.height = "30px";
+              tickLine.style.width = "1.5px";
+              tick.appendChild(tickLine);
+            } else {
+              tickLine.style.height = "18px";
+              tickLine.style.width = "1px";
+              tick.appendChild(tickLine);
+            }
+            this.numberLine.appendChild(tick);
+          });
+        }
+
+        getIndexForValue(value) {
+          if (this.options.valueMap) {
+            return this.options.valueMap.findIndex(
+              (item) => String(item.value) === String(value)
+            );
+          }
+          const idx = Math.round(
+            (value - this.options.min) / this.options.step
+          );
+          return Math.max(
+            0,
+            Math.min(
+              (this.options.max - this.options.min) / this.options.step,
+              idx
+            )
+          );
+        }
+
+        getValueForIndex(index) {
+          if (this.options.valueMap) {
+            if (index < 0) index = 0;
+            if (index >= this.options.valueMap.length)
+              index = this.options.valueMap.length - 1;
+            return this.options.valueMap[index].value;
+          }
+          const val = index * this.options.step + this.options.min;
+          return Math.max(this.options.min, Math.min(this.options.max, val));
+        }
+
+        getOffsetForIndex(index) {
+          const containerWidth = this.drumContainer.offsetWidth;
+          const centerOffset = containerWidth / 2;
+          return (
+            centerOffset -
+            index * this.options.tickWidth -
+            this.options.tickWidth / 2
+          );
+        }
+
+        getIndexFromOffset(offset) {
+          const containerWidth = this.drumContainer.offsetWidth;
+          const centerOffset = containerWidth / 2;
+          const rawIndex =
+            (centerOffset - offset - this.options.tickWidth / 2) /
+            this.options.tickWidth;
+
+          let maxIndex = 0;
+          if (this.options.valueMap)
+            maxIndex = this.options.valueMap.length - 1;
+          else
+            maxIndex =
+              (this.options.max - this.options.min) / this.options.step;
+
+          const index = Math.round(rawIndex);
+          return Math.max(0, Math.min(maxIndex, index));
+        }
+
+        updatePositionFromValue(value, animate = true) {
+          let index = this.getIndexForValue(value);
+          const offset = this.getOffsetForIndex(index);
+          this.currentOffset = offset;
+          this.currentValue = value;
+          this.updateUI(value);
+
+          if (animate) this.numberLine.classList.remove("dragging");
+          else this.numberLine.classList.add("dragging");
+
+          this.numberLine.style.transform = `translateX(${offset}px)`;
+          this.updateTickOpacity();
+        }
+
+        updateUI(value) {
+          let label = value;
+          if (this.options.valueMap) {
+            const item = this.options.valueMap.find(
+              (i) => String(i.value) === String(value)
+            );
+            if (item) label = item.label;
+          } else {
+            // rounding for linear
+            if (typeof value === "number")
+              label = value.toFixed(1).replace(".0", "");
+          }
+          this.valueDisplay.textContent = label;
+          if (this.options.onUpdate) this.options.onUpdate(value);
+        }
+
+        updateTickOpacity() {
+          const containerWidth = this.drumContainer.offsetWidth;
+          const centerX = containerWidth / 2;
+          const ticks = this.numberLine.children;
+          const containerRect = this.drumContainer.getBoundingClientRect();
+
+          for (let tick of ticks) {
+            const rect = tick.getBoundingClientRect();
+            const tickCenterX = rect.left + rect.width / 2 - containerRect.left;
+            const distance = Math.abs(tickCenterX - centerX);
+            const maxDistance = containerWidth / 2;
+            const opacity = 1 - Math.min(distance / maxDistance, 1) * 0.7;
+            tick.style.opacity = Math.max(0.1, opacity);
+          }
+        }
+
+        haptic() {
+          if ("vibrate" in navigator) navigator.vibrate(5);
+        }
+
+        bindEvents() {
+          this.drumContainer.addEventListener("mousedown", (e) => {
+            this.isDragging = true;
+            this.startX = e.clientX - this.currentOffset;
+            this.numberLine.classList.add("dragging");
+          });
+          document.addEventListener("mousemove", (e) => {
+            if (!this.isDragging) return;
+            e.preventDefault();
+            this.handleDrag(e.clientX);
+          });
+          document.addEventListener("mouseup", () => this.finishDrag());
+
+          this.drumContainer.addEventListener("touchstart", (e) => {
+            this.isDragging = true;
+            this.startX = e.touches[0].clientX - this.currentOffset;
+          });
+          document.addEventListener(
+            "touchmove",
+            (e) => {
+              if (!this.isDragging) return;
+              e.preventDefault();
+              this.handleDrag(e.touches[0].clientX);
+            },
+            { passive: false }
+          );
+          document.addEventListener("touchend", () => this.finishDrag());
+        }
+
+        handleDrag(clientX) {
+          const newOffset = clientX - this.startX;
+          let maxIndex = this.options.valueMap
+            ? this.options.valueMap.length - 1
+            : (this.options.max - this.options.min) / this.options.step;
+          const minOffset = this.getOffsetForIndex(maxIndex);
+          const maxOffset = this.getOffsetForIndex(0);
+          const clampedOffset = Math.max(
+            minOffset,
+            Math.min(maxOffset, newOffset)
+          );
+
+          this.currentOffset = clampedOffset;
+          this.numberLine.style.transform = `translateX(${clampedOffset}px)`;
+
+          const index = this.getIndexFromOffset(clampedOffset);
+          const value = this.getValueForIndex(index);
+          this.updateTickOpacity();
+
+          if (String(value) !== String(this.currentValue)) {
+            this.currentValue = value;
+            this.updateUI(value);
+            this.haptic();
+          }
+        }
+
+        finishDrag() {
+          if (!this.isDragging) return;
+          this.isDragging = false;
+          this.numberLine.classList.remove("dragging");
+          this.updatePositionFromValue(this.currentValue, true);
+        }
+
+        setValue(val) {
+          this.updatePositionFromValue(val, true);
+        }
+      }
+
+      class ToggleSwitch {
+        constructor(switchId, checkboxId) {
+          this.switchBody = document.getElementById(switchId);
+          this.checkbox = document.getElementById(checkboxId);
+          this.lever = this.switchBody.querySelector(".lever");
+          this.isOn = this.checkbox.checked;
+          this.updateVisual();
+
+          this.switchBody.addEventListener("click", () => {
+            this.isOn = !this.isOn;
+            this.checkbox.checked = this.isOn;
+            // Trigger change event manually
+            this.checkbox.dispatchEvent(new Event("change"));
+            this.updateVisual();
+          });
+
+          // Allow ext change
+          this.checkbox.addEventListener("change", () => {
+            this.isOn = this.checkbox.checked;
+            this.updateVisual();
+          });
+        }
+
+        updateVisual() {
+          this.lever.className = this.isOn ? "lever on" : "lever off";
+        }
+      }
+
+      // --- Init UI Controls ---
+      window.addEventListener("load", function () {
+        // F-Stop Dial: 1.4 to 16, step 0.1
+        new DialControl("f-dial-container", {
+          min: 1.4,
+          max: 16,
+          step: 0.1,
+          initialValue: 2.0,
+          labelUnit: "F",
+          tickWidth: 35,
+          onUpdate: (v) => (document.getElementById("rngF").value = v),
+        });
+
+        // Shutter Dial: 100 to 0 (Fast to Slow). Map to 0-1 for param.
+        // Wait, logic says: 0=slow(trail), 1=fast(no trail).
+        // Let's make dial 0-100? Or "Fast" vs "Slow".
+        // Let's use 0-100 linear for now.
+        new DialControl("shutter-dial-container", {
+          min: 0,
+          max: 100,
+          step: 1,
+          initialValue: 72,
+          labelUnit: "%",
+          onUpdate: (v) =>
+            (document.getElementById("rngShutter").value = (v / 100).toFixed(
+              2
+            )),
+        });
+
+        // ISO Dial: 100 to 6400
+        new DialControl("iso-dial-container", {
+          min: 100,
+          max: 6400,
+          step: 100,
+          initialValue: 400,
+          labelUnit: "",
+          onUpdate: (v) => (document.getElementById("rngISO").value = v),
+        });
+
+        // Focus Dial: 0.15 to 1.0
+        new DialControl("focus-dial-container", {
+          min: 0.15,
+          max: 1.0,
+          step: 0.01,
+          initialValue: 0.45,
+          labelUnit: "m?",
+          onUpdate: (v) => (document.getElementById("rngFocus").value = v),
+        });
+
+        // Toggles
+        new ToggleSwitch("switch-face", "chkFace");
+        new ToggleSwitch("switch-lp", "chkLowPower");
+        new ToggleSwitch("switch-debug", "chkDebug");
+
+        // Initial Support Check
+        initSupport();
+      });
+
+      // --- Logic from demo/index-7.html ---
+
+      const $ = (id) => document.getElementById(id);
+      const els = {
+        video: $("video"),
+        view: $("view"),
+        viewWrap: $("viewWrap"),
+        btnStart: $("btnStart"),
+        btnStop: $("btnStop"),
+        btnShot: $("btnShot"),
+        statusText: $("statusText"),
+        fpsBadge: $("fpsBadge"),
+        supportBadge: $("supportBadge"),
+        tapHint: $("tapHint"),
+        selFacing: $("selFacing"),
+        selRes: $("selRes"),
+        chkLowPower: $("chkLowPower"),
+        chkFace: $("chkFace"),
+        chkDebug: $("chkDebug"),
+        rngF: $("rngF"),
+        rngFocus: $("rngFocus"),
+        rngFeather: $("rngFeather"),
+        rngShutter: $("rngShutter"),
+        rngISO: $("rngISO"),
+        rngEV: $("rngEV"),
+        rngNoise: $("rngNoise"),
+      };
+      const env = {
+        mobile:
+          matchMedia("(pointer: coarse)").matches ||
+          /Android|iPhone|iPad|iPod/i.test(navigator.userAgent),
+        iOS: /iPhone|iPad|iPod/i.test(navigator.userAgent),
+      };
+      const state = {
+        stream: null,
+        running: false,
+        w: 640,
+        h: 480,
+        focusPoint: { x: 0.5, y: 0.45 },
+        faceRect: null,
+        faceDetector: null,
+        faceOk: false,
+        frameCount: 0,
+        lastT: performance.now(),
+        fpsEMA: 0,
+        raw: null,
+        blur: null,
+        comp: null,
+        sharpMasked: null,
+        maskSmall: null,
+        trailA: null,
+        trailB: null,
+        noise: null,
+      };
+
+      function setStatus(msg) {
+        els.statusText.textContent = msg;
+      }
+      function clamp(v, a, b) {
+        return Math.min(b, Math.max(a, v));
+      }
+      function parseRes(value) {
+        const [w, h] = value.split("x").map(Number);
+        return { w, h };
+      }
+      function createCanvas(w, h) {
+        const c = document.createElement("canvas");
+        c.width = w;
+        c.height = h;
+        return c;
+      }
+
+      function initSupport() {
+        state.faceOk = "FaceDetector" in window;
+        if (state.faceOk) {
+          try {
+            state.faceDetector = new FaceDetector({
+              fastMode: true,
+              maxDetectedFaces: 1,
+            });
+            els.supportBadge.textContent = "Available";
+            els.supportBadge.style.color = "#00aa00";
+          } catch {
+            state.faceOk = false;
+          }
+        }
+        if (!state.faceOk) {
+          els.supportBadge.textContent = "Not Supported (Tap to focus)";
+          els.supportBadge.style.color = "#cc0000";
+        }
+        els.chkFace.disabled = !state.faceOk;
+        if (!state.faceOk) els.chkFace.checked = false;
+      }
+
+      function setupCanvases(w, h) {
+        state.w = w;
+        state.h = h;
+        els.view.width = w;
+        els.view.height = h;
+        state.raw = createCanvas(w, h);
+        state.blur = createCanvas(w, h);
+        state.comp = createCanvas(w, h);
+        state.sharpMasked = createCanvas(w, h);
+
+        const div = els.chkLowPower.checked ? 5 : 4;
+        const mw = Math.max(72, Math.round(w / div));
+        const mh = Math.max(54, Math.round(h / div));
+        state.maskSmall = createCanvas(mw, mh);
+
+        state.trailA = createCanvas(w, h);
+        state.trailB = createCanvas(w, h);
+        state.noise = createCanvas(160, 120);
+      }
+
+      async function startCamera() {
+        if (state.running) return;
+        const { w: idealW, h: idealH } = parseRes(els.selRes.value);
+        const facing = els.selFacing.value;
+        setStatus("Requesting Camera...");
+
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: { ideal: facing },
+            width: { ideal: idealW },
+            height: { ideal: idealH },
+            frameRate: env.mobile
+              ? { ideal: 24, max: 30 }
+              : { ideal: 30, max: 60 },
+          },
+        };
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia(constraints);
+          state.stream = stream;
+          els.video.srcObject = stream;
+          await els.video.play();
+          const vw = els.video.videoWidth || idealW;
+          const vh = els.video.videoHeight || idealH;
+          setupCanvases(vw, vh);
+          state.trailA.getContext("2d").clearRect(0, 0, vw, vh);
+          state.trailB.getContext("2d").clearRect(0, 0, vw, vh);
+          state.running = true;
+          state.frameCount = 0;
+          state.lastT = performance.now();
+          state.fpsEMA = 0;
+          state.faceRect = null;
+          els.btnStart.disabled = true;
+          els.btnStop.disabled = false;
+          els.btnShot.disabled = false;
+          els.selRes.disabled = true;
+          els.selFacing.disabled = true;
+          setStatus("Running");
+          requestAnimationFrame(loop);
+        } catch (err) {
+          console.error(err);
+          setStatus("Camera Fail (HTTPS req)");
+        }
+      }
+
+      function stopCamera() {
+        state.running = false;
+        if (state.stream) state.stream.getTracks().forEach((t) => t.stop());
+        state.stream = null;
+        els.video.srcObject = null;
+        els.btnStart.disabled = false;
+        els.btnStop.disabled = true;
+        els.btnShot.disabled = true;
+        els.selRes.disabled = false;
+        els.selFacing.disabled = false;
+        setStatus("Stopped");
+        els.fpsBadge.textContent = "--";
+      }
+
+      function updateFPS(now) {
+        const dt = Math.max(0.001, (now - state.lastT) / 1000);
+        state.lastT = now;
+        const fps = 1 / dt;
+        state.fpsEMA = state.fpsEMA ? state.fpsEMA * 0.9 + fps * 0.1 : fps;
+        els.fpsBadge.textContent = state.fpsEMA.toFixed(1);
+      }
+
+      async function maybeDetectFace() {
+        if (!els.chkFace.checked) return;
+        if (!state.faceOk || !state.faceDetector) return;
+        const baseEvery = env.mobile ? 10 : 6;
+        const every = els.chkLowPower.checked
+          ? Math.max(12, baseEvery)
+          : baseEvery;
+        if (state.frameCount % every !== 0) return;
+        try {
+          const faces = await state.faceDetector.detect(els.video);
+          if (faces && faces.length) {
+            const bb = faces[0].boundingBox;
+            const sx = state.w / (els.video.videoWidth || state.w);
+            const sy = state.h / (els.video.videoHeight || state.h);
+            state.faceRect = {
+              x: bb.x * sx,
+              y: bb.y * sy,
+              w: bb.width * sx,
+              h: bb.height * sy,
+            };
+          } else {
+            state.faceRect = null;
+          }
+        } catch {
+          state.faceRect = null;
+        }
+      }
+
+      function computeFocusCenter() {
+        if (els.chkFace.checked && state.faceRect) {
+          const cx = (state.faceRect.x + state.faceRect.w / 2) / state.w;
+          const cy = (state.faceRect.y + state.faceRect.h / 2) / state.h;
+          return { x: clamp(cx, 0, 1), y: clamp(cy, 0, 1) };
+        }
+        return { ...state.focusPoint };
+      }
+
+      function fToBlurPx(f) {
+        const t = 16 / f;
+        const cap = els.chkLowPower.checked ? 18 : 28;
+        return clamp(Math.pow(t, 1.15) * 3.2, 0, cap);
+      }
+
+      function isoToBrightnessAndNoise(iso, ev, extraNoise) {
+        const stops = Math.log2(iso / 100);
+        const brightness = clamp(1 + stops * 0.18 + ev * 0.25, 0.4, 2.4);
+        const baseNoise = clamp(stops * 0.1, 0, 0.55);
+        const noise = clamp(baseNoise + extraNoise * 0.55, 0, 0.85);
+        return { brightness, noise };
+      }
+
+      function drawNoiseTile(ctx, w, h, amount) {
+        ctx.clearRect(0, 0, w, h);
+        if (amount <= 0.001) return;
+        const img = ctx.getImageData(0, 0, w, h);
+        const d = img.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const n = (Math.random() * 255) | 0;
+          d[i] = n;
+          d[i + 1] = n;
+          d[i + 2] = n;
+          d[i + 3] = 255;
+        }
+        ctx.putImageData(img, 0, 0);
+      }
+
+      function buildMask(maskCtx, mw, mh, center, focus, feather) {
+        maskCtx.clearRect(0, 0, mw, mh);
+        const cx = center.x * mw;
+        const cy = center.y * mh;
+        const minDim = Math.min(mw, mh);
+        const radius = minDim * (0.12 + focus * 0.55);
+        const inner = radius * (0.55 + feather * 0.3);
+        const outer = radius * (1.15 + feather * 0.85);
+        const g = maskCtx.createRadialGradient(
+          cx,
+          cy,
+          Math.max(1, inner),
+          cx,
+          cy,
+          Math.max(inner + 1, outer)
+        );
+        g.addColorStop(0, "rgba(255,255,255,1)");
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        maskCtx.fillStyle = g;
+        maskCtx.fillRect(0, 0, mw, mh);
+        if (els.chkFace.checked && state.faceRect) {
+          const fx = (state.faceRect.x / state.w) * mw;
+          const fy = (state.faceRect.y / state.h) * mh;
+          const fw = (state.faceRect.w / state.w) * mw;
+          const fh = (state.faceRect.h / state.h) * mh;
+          maskCtx.save();
+          maskCtx.globalCompositeOperation = "lighter";
+          maskCtx.fillStyle = "rgba(255,255,255,0.35)";
+          const pad = Math.min(fw, fh) * 0.25;
+          maskCtx.fillRect(fx - pad, fy - pad, fw + pad * 2, fh + pad * 2);
+          maskCtx.restore();
+        }
+      }
+
+      function compositeDepthOfField({
+        blurPx,
+        center,
+        focus,
+        feather,
+        debug,
+      }) {
+        const w = state.w,
+          h = state.h;
+        const rawCtx = state.raw.getContext("2d");
+        const blurCtx = state.blur.getContext("2d");
+        const compCtx = state.comp.getContext("2d");
+        const sharpCtx = state.sharpMasked.getContext("2d");
+        const maskCtx = state.maskSmall.getContext("2d");
+
+        rawCtx.drawImage(els.video, 0, 0, w, h);
+        buildMask(
+          maskCtx,
+          state.maskSmall.width,
+          state.maskSmall.height,
+          center,
+          focus,
+          feather
+        );
+
+        blurCtx.filter = `blur(${blurPx.toFixed(2)}px)`;
+        blurCtx.drawImage(state.raw, 0, 0, w, h);
+        blurCtx.filter = "none";
+
+        sharpCtx.globalCompositeOperation = "source-over";
+        sharpCtx.drawImage(state.raw, 0, 0, w, h);
+        sharpCtx.globalCompositeOperation = "destination-in";
+        sharpCtx.drawImage(state.maskSmall, 0, 0, w, h);
+        sharpCtx.globalCompositeOperation = "source-over";
+
+        compCtx.drawImage(state.blur, 0, 0);
+        compCtx.drawImage(state.sharpMasked, 0, 0);
+
+        if (debug) {
+          compCtx.save();
+          compCtx.globalAlpha = 0.55;
+          compCtx.globalCompositeOperation = "screen";
+          compCtx.drawImage(state.maskSmall, 0, 0, w, h);
+          compCtx.restore();
+        }
+      }
+
+      function applyShutterAndISO() {
+        const w = state.w,
+          h = state.h;
+        const viewCtx = els.view.getContext("2d");
+        const compCanvas = state.comp;
+
+        const shutter = Number(els.rngShutter.value);
+        const mix = clamp(shutter, 0.02, 1.0);
+
+        let finalCanvas = compCanvas;
+        if (mix < 0.999) {
+          const a = state.trailA;
+          const b = state.trailB;
+          const bctx = b.getContext("2d");
+          bctx.globalCompositeOperation = "source-over";
+          bctx.globalAlpha = 1 - mix;
+          bctx.drawImage(a, 0, 0);
+          bctx.globalAlpha = mix;
+          bctx.drawImage(compCanvas, 0, 0);
+          bctx.globalAlpha = 1;
+          state.trailA = b;
+          state.trailB = a;
+          finalCanvas = state.trailA;
+        }
+
+        const iso = Number(els.rngISO.value);
+        const ev = Number(els.rngEV.value);
+        const extraNoise = Number(els.rngNoise.value);
+        const { brightness, noise } = isoToBrightnessAndNoise(
+          iso,
+          ev,
+          extraNoise
+        );
+
+        viewCtx.filter = `brightness(${brightness.toFixed(3)})`;
+        viewCtx.drawImage(finalCanvas, 0, 0);
+        viewCtx.filter = "none";
+
+        if (noise > 0.001) {
+          const noiseEvery = env.mobile || els.chkLowPower.checked ? 3 : 2;
+          if (state.frameCount % noiseEvery === 0) {
+            drawNoiseTile(
+              state.noise.getContext("2d"),
+              state.noise.width,
+              state.noise.height,
+              noise
+            );
+          }
+          viewCtx.save();
+          viewCtx.globalAlpha = clamp(noise, 0, 0.85);
+          viewCtx.globalCompositeOperation = "soft-light";
+          viewCtx.drawImage(state.noise, 0, 0, w, h);
+          viewCtx.restore();
+        }
+      }
+
+      async function loop(now) {
+        if (!state.running) return;
+        updateFPS(now);
+        state.frameCount++;
+        await maybeDetectFace();
+        const f = Number(els.rngF.value);
+        const blurPx = fToBlurPx(f);
+        const focus = Number(els.rngFocus.value);
+        const feather = Number(els.rngFeather.value);
+        const debug = els.chkDebug.checked;
+        const center = computeFocusCenter();
+        compositeDepthOfField({ blurPx, center, focus, feather, debug });
+        applyShutterAndISO();
+        requestAnimationFrame(loop);
+      }
+
+      async function snapshotShareOrDownload() {
+        if (!state.running) return;
+        const ts = new Date().toISOString().replace(/[:.]/g, "-");
+        const name = `pseudo-camera-${ts}.png`;
+        const blob = await new Promise((resolve) =>
+          els.view.toBlob(resolve, "image/png")
+        );
+        if (!blob) return;
+        const file = new File([blob], name, { type: "image/png" });
+        if (
+          navigator.share &&
+          navigator.canShare &&
+          navigator.canShare({ files: [file] })
+        ) {
+          try {
+            await navigator.share({ title: "Snapshot", files: [file] });
+            return;
+          } catch {}
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.download = name;
+        a.href = url;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }
+
+      // Tap to focus
+      els.view.addEventListener("pointerdown", (e) => {
+        if (els.chkFace.checked) return;
+        const rect = els.view.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        state.focusPoint = { x: clamp(x, 0, 1), y: clamp(y, 0, 1) };
+      });
+    </script>
+  </body>
+</html>

@@ -143,8 +143,8 @@
 
 .filter-btn {
     background: transparent;
-    border: 2px solid rgba(255, 255, 255, 0.5);
-    color: rgba(255, 255, 255, 0.8);
+    border: 2px solid rgba(55, 148, 235, 1);
+    color: rgba(55, 148, 235, 1);
     padding: 12px 25px;
     font-family: 'Orbitron', monospace;
     font-size: 0.9em;
