@@ -231,60 +231,48 @@
           </div>
         </div>
 
-        <div
-          class="details-grid"
-          style="
-            margin-top: 20px;
-            border-top: 1px solid #ddd;
-            padding-top: 15px;
-          "
-        >
-          <label
-            >Resolution:
-            <select id="selRes">
-              <option value="320x240">Low (320x240)</option>
-              <option value="640x480" selected>Medium (640x480)</option>
-              <option value="1280x720">High (1280x720)</option>
-            </select>
-          </label>
-          <label
-            >Camera:
-            <select id="selFacing">
-              <option value="user" selected>Front</option>
-              <option value="environment">Back</option>
-            </select>
-          </label>
-          <label
-            >Feather (Edge):
-            <input
-              type="range"
-              id="rngFeather"
-              min="0.05"
-              max="1.0"
-              step="0.01"
-              value="0.55"
-          /></label>
-          <label
-            >EV (Bias):
-            <input
-              type="range"
-              id="rngEV"
-              min="-2"
-              max="2"
-              step="0.1"
-              value="0"
-          /></label>
-          <label
-            >Noise Level:
-            <input
-              type="range"
-              id="rngNoise"
-              min="0"
-              max="1"
-              step="0.01"
-              value="0.20"
-          /></label>
         </div>
+
+        <div class="section">
+             <h3>Advanced Adjustments</h3>
+             <div class="dial-grid">
+                <!-- Feather -->
+                <div class="form-group">
+                    <label>Feather (Edge)</label>
+                    <input type="hidden" id="rngFeather" value="0.55">
+                    <div id="feather-dial-container"></div>
+                </div>
+
+                <!-- EV -->
+                <div class="form-group">
+                    <label>EV (Bias)</label>
+                    <input type="hidden" id="rngEV" value="0">
+                    <div id="ev-dial-container"></div>
+                </div>
+
+                <!-- Noise -->
+                <div class="form-group">
+                    <label>Noise Level</label>
+                    <input type="hidden" id="rngNoise" value="0.20">
+                    <div id="noise-dial-container"></div>
+                </div>
+             </div>
+
+             <div class="details-grid" style="margin-top:20px; border-top:1px solid #ddd; padding-top:15px;">
+                <label>Resolution: 
+                    <select id="selRes">
+                        <option value="320x240">Low (320x240)</option>
+                        <option value="640x480" selected>Medium (640x480)</option>
+                        <option value="1280x720">High (1280x720)</option>
+                    </select>
+                </label>
+                <label>Camera: 
+                    <select id="selFacing">
+                        <option value="user" selected>Front</option>
+                        <option value="environment">Back</option>
+                    </select>
+                </label>
+             </div>
 
         <div
           style="
@@ -675,6 +663,24 @@
           initialValue: 0.45,
           labelUnit: "m?",
           onUpdate: (v) => (document.getElementById("rngFocus").value = v),
+        });
+
+        // Feather Dial: 0.05 to 1.0
+        new DialControl("feather-dial-container", {
+             min: 0.05, max: 1.0, step: 0.01, initialValue: 0.55, labelUnit: "",
+             onUpdate: (v) => document.getElementById("rngFeather").value = v
+        });
+
+        // EV Dial: -2.0 to 2.0
+        new DialControl("ev-dial-container", {
+             min: -2.0, max: 2.0, step: 0.1, initialValue: 0, labelUnit: "EV",
+             onUpdate: (v) => document.getElementById("rngEV").value = v
+        });
+
+        // Noise Dial: 0 to 1.0
+        new DialControl("noise-dial-container", {
+             min: 0, max: 1.0, step: 0.01, initialValue: 0.20, labelUnit: "",
+             onUpdate: (v) => document.getElementById("rngNoise").value = v
         });
 
         // Toggles
