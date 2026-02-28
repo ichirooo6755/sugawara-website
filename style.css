@@ -589,6 +589,548 @@ footer p {
   opacity: 1 !important;
 }
 
+/* ========== Hero CTA Buttons ========== */
+.hero-cta {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 30px;
+    flex-wrap: wrap;
+}
+
+.hero-cta-btn {
+    display: inline-block;
+    background: rgba(55, 148, 235, 1);
+    border: 2px solid rgba(55, 148, 235, 1);
+    color: var(--blueprint-blue);
+    padding: 14px 32px;
+    font-family: "Orbitron", monospace;
+    font-size: 0.85em;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.hero-cta-btn--outline {
+    background: transparent;
+    color: rgba(55, 148, 235, 1);
+}
+
+.hero-cta-btn:hover {
+    background: #fff;
+    border-color: #fff;
+    color: var(--blueprint-blue);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+}
+
+.hero-cta-btn--outline:hover {
+    background: rgba(55, 148, 235, 1);
+    color: var(--blueprint-blue);
+    box-shadow: 0 0 20px rgba(55, 148, 235, 0.5);
+}
+
+/* ========== Product Content Sections ========== */
+
+/* 共通セクションスタイル */
+.why-section,
+.features-grid-section,
+.usecases-section,
+.pricing-section,
+.cta-section {
+    position: relative;
+    z-index: 10;
+    padding: 30px;
+    border: 2px solid rgba(55, 148, 235, 1);
+    margin: 20px 0;
+    background: rgba(217, 235, 55, 0.8);
+    box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.15);
+}
+
+.steps-section,
+.specs-section {
+    position: relative;
+    z-index: 10;
+    padding: 30px;
+    border: 2px solid rgba(55, 148, 235, 1);
+    margin: 20px 0;
+    background: rgba(200, 218, 30, 0.85);
+    box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.2);
+}
+
+.section-title {
+    font-size: 1.5em;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 25px;
+    color: rgba(55, 148, 235, 1);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    border-left: 4px solid rgba(55, 148, 235, 1);
+    padding-left: 15px;
+}
+
+/* Why Section */
+.why-section {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.why-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(55, 148, 235, 1);
+    padding: 25px;
+    transition: all 0.3s ease;
+}
+
+.why-card:hover {
+    box-shadow: 0 0 20px rgba(55, 148, 235, 0.4);
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.why-card .why-icon {
+    font-size: 0.85em;
+    letter-spacing: 2px;
+    color: rgba(55, 148, 235, 0.8);
+    margin-bottom: 12px;
+}
+
+.why-card h3 {
+    font-size: 0.9em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(55, 148, 235, 1);
+    margin-bottom: 12px;
+}
+
+.why-card p {
+    font-size: 0.82em;
+    letter-spacing: 1px;
+    line-height: 1.9;
+    color: #fff;
+}
+
+/* Features Grid */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+}
+
+.feature-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(55, 148, 235, 1);
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    box-shadow: 0 0 20px rgba(55, 148, 235, 0.4);
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.feature-icon {
+    font-size: 0.9em;
+    letter-spacing: 2px;
+    color: rgba(55, 148, 235, 0.8);
+    margin-bottom: 10px;
+}
+
+.feature-card h3 {
+    font-size: 0.95em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(55, 148, 235, 1);
+    margin-bottom: 12px;
+}
+
+.feature-card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.feature-card ul li {
+    font-size: 0.8em;
+    letter-spacing: 1px;
+    line-height: 1.8;
+    padding-left: 12px;
+    position: relative;
+    color: #fff;
+}
+
+.feature-card ul li::before {
+    content: ">";
+    position: absolute;
+    left: 0;
+    color: rgba(55, 148, 235, 1);
+}
+
+/* Steps Section */
+.steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    border: 2px solid rgba(55, 148, 235, 1);
+    padding: 15px 20px;
+    background: rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.step-item:hover {
+    background: rgba(0, 0, 0, 0.3);
+    box-shadow: 0 0 15px rgba(55, 148, 235, 0.3);
+}
+
+.step-number {
+    font-size: 1.8em;
+    font-weight: 900;
+    color: rgba(55, 148, 235, 1);
+    letter-spacing: 2px;
+    min-width: 50px;
+    text-shadow: 0 0 10px rgba(55, 148, 235, 0.4);
+}
+
+.step-content h3 {
+    font-size: 1em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(55, 148, 235, 1);
+    margin-bottom: 5px;
+}
+
+.step-content p {
+    font-size: 0.85em;
+    letter-spacing: 1px;
+    color: #fff;
+    line-height: 1.7;
+}
+
+/* Specs Table */
+.specs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "Orbitron", monospace;
+}
+
+.specs-table th,
+.specs-table td {
+    padding: 12px 18px;
+    border: 2px solid rgba(55, 148, 235, 1);
+    text-align: left;
+    font-size: 0.85em;
+    letter-spacing: 1px;
+}
+
+.specs-table th {
+    color: rgba(55, 148, 235, 1);
+    background: rgba(0, 0, 0, 0.2);
+    white-space: nowrap;
+    width: 160px;
+}
+
+.specs-table td {
+    color: #fff;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.specs-table tr:hover th,
+.specs-table tr:hover td {
+    background: rgba(55, 148, 235, 0.1);
+}
+
+/* Usecases Section */
+.usecases-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.usecase-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(55, 148, 235, 1);
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.usecase-card:hover {
+    box-shadow: 0 0 20px rgba(55, 148, 235, 0.4);
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.usecase-card h3 {
+    font-size: 0.9em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(55, 148, 235, 1);
+    margin-bottom: 15px;
+}
+
+.usecase-card ul {
+    list-style: none;
+    padding: 0;
+}
+
+.usecase-card ul li {
+    font-size: 0.8em;
+    letter-spacing: 1px;
+    line-height: 1.9;
+    padding-left: 12px;
+    position: relative;
+    color: #fff;
+}
+
+.usecase-card ul li::before {
+    content: ">";
+    position: absolute;
+    left: 0;
+    color: rgba(55, 148, 235, 1);
+}
+
+/* Pricing Section */
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+}
+
+.pricing-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 2px solid rgba(55, 148, 235, 1);
+    padding: 25px;
+    transition: all 0.3s ease;
+}
+
+.pricing-card:hover {
+    box-shadow: 0 0 25px rgba(55, 148, 235, 0.4);
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.pricing-card--featured {
+    border-color: #fff;
+    box-shadow: 0 0 30px rgba(55, 148, 235, 0.5);
+    position: relative;
+    margin-top: 14px;
+}
+
+.pricing-card--featured::before {
+    content: "RECOMMENDED";
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(55, 148, 235, 1);
+    color: var(--blueprint-blue);
+    padding: 3px 16px;
+    font-size: 0.7em;
+    font-family: "Orbitron", monospace;
+    font-weight: 700;
+    letter-spacing: 2px;
+    white-space: nowrap;
+}
+
+.pricing-card--featured:hover {
+    box-shadow: 0 0 40px rgba(55, 148, 235, 0.7);
+}
+
+.pricing-card h3 {
+    font-size: 1em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: rgba(55, 148, 235, 1);
+    margin-bottom: 10px;
+}
+
+.pricing-price {
+    font-size: 2em;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 3px;
+    text-shadow: 0 0 15px rgba(255, 255, 255, 0.4);
+    margin: 15px 0;
+}
+
+.pricing-card ul {
+    list-style: none;
+    padding: 0;
+    margin-top: 15px;
+    border-top: 2px solid rgba(55, 148, 235, 0.4);
+    padding-top: 15px;
+}
+
+.pricing-card ul li {
+    font-size: 0.82em;
+    letter-spacing: 1px;
+    line-height: 2;
+    padding-left: 12px;
+    position: relative;
+    color: #fff;
+}
+
+.pricing-card ul li::before {
+    content: ">";
+    position: absolute;
+    left: 0;
+    color: rgba(55, 148, 235, 1);
+}
+
+/* CTA Section */
+.cta-section {
+    text-align: center;
+}
+
+.cta-section h2 {
+    font-size: 1.5em;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: rgba(55, 148, 235, 1);
+    margin-bottom: 15px;
+}
+
+.cta-tagline {
+    font-size: 1em;
+    letter-spacing: 2px;
+    color: #fff;
+    line-height: 1.8;
+    margin-bottom: 25px;
+}
+
+.cta-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 30px;
+}
+
+.cta-btn {
+    display: inline-block;
+    background: transparent;
+    border: 2px solid rgba(55, 148, 235, 1);
+    color: rgba(55, 148, 235, 1);
+    padding: 12px 24px;
+    font-family: "Orbitron", monospace;
+    font-size: 0.85em;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.cta-btn:hover {
+    background: rgba(55, 148, 235, 1);
+    color: var(--blueprint-blue);
+    box-shadow: 0 0 20px rgba(55, 148, 235, 0.5);
+}
+
+.cta-sns {
+    border-top: 2px solid rgba(55, 148, 235, 0.4);
+    padding-top: 20px;
+}
+
+.cta-sns p {
+    font-size: 0.8em;
+    letter-spacing: 1px;
+    color: rgba(55, 148, 235, 0.9);
+    line-height: 2;
+}
+
+/* FAQ Accordion */
+.faq-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.faq-item {
+    border: 2px solid rgba(55, 148, 235, 1);
+    background: rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.faq-question {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    cursor: pointer;
+    font-size: 0.9em;
+    letter-spacing: 1px;
+    color: rgba(55, 148, 235, 1);
+    transition: background 0.3s ease;
+}
+
+.faq-question:hover {
+    background: rgba(55, 148, 235, 0.1);
+}
+
+.faq-toggle {
+    font-size: 1.2em;
+    font-weight: 900;
+    transition: transform 0.3s ease;
+    min-width: 20px;
+    text-align: center;
+}
+
+.faq-answer {
+    padding: 0 20px 18px;
+    font-size: 0.85em;
+    letter-spacing: 1px;
+    line-height: 1.9;
+    color: #fff;
+    border-top: 1px solid rgba(55, 148, 235, 0.3);
+    padding-top: 15px;
+}
+
+/* ========== Responsive: Product Sections ========== */
+@media (max-width: 768px) {
+    .why-section {
+        grid-template-columns: 1fr;
+    }
+
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .usecases-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pricing-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .cta-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .step-number {
+        font-size: 1.3em;
+        min-width: 40px;
+    }
+
+    .hero-cta {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .features-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* ========== LightGallery Overrides ========== */
 .lg-backdrop {
   background-color: rgba(217, 235, 55, 0.95) !important;
