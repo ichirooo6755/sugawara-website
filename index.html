@@ -63,9 +63,20 @@
         .comment-list-toggle {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             cursor: pointer;
             user-select: none;
+            margin-top: 18px;
+            padding: 10px 15px;
+            border: 1px solid rgba(55, 148, 235, 0.5);
+            background: rgba(55, 148, 235, 0.08);
+            font-size: 0.85em;
+            letter-spacing: 2px;
+            color: rgba(55, 148, 235, 0.9);
+            transition: background 0.2s;
+        }
+        .comment-list-toggle:hover {
+            background: rgba(55, 148, 235, 0.15);
         }
         .comment-list-toggle-icon {
             display: inline-block;
@@ -81,6 +92,18 @@
         }
         .comment-list-open .comment-list-toggle-icon {
             transform: rotate(90deg);
+        }
+
+        /* why-section open状態でgridを復元 */
+        .why-section.open .section-content {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .why-section.open .section-content {
+                grid-template-columns: 1fr;
+            }
         }
 
         /* セクション折りたたみ */
@@ -183,18 +206,19 @@
 
         <!-- Comments Section (moved above product sections) -->
         <main class="comment-section">
-            <h2 class="comment-list-toggle">
-                COMMENTS <span id="comment-count" class="comment-count-badge">0</span>
-                <span class="comment-list-toggle-icon">▶</span>
-            </h2>
-
-            <ul id="comment-list"></ul>
+            <h2>COMMENTS <span id="comment-count" class="comment-count-badge">0</span></h2>
 
             <form id="comment-form">
                 <input type="text" name="name" placeholder="お名前" required />
                 <textarea name="comment" placeholder="コメントを入力..." required></textarea>
                 <button type="submit">送信</button>
             </form>
+
+            <div class="comment-list-toggle" id="comment-list-toggle">
+                <span class="comment-list-toggle-icon">▶</span>
+                みんなのコメントを見る
+            </div>
+            <ul id="comment-list"></ul>
         </main>
 
         <!-- Product Content Sections -->
@@ -429,20 +453,18 @@
             </div>
         </section>
 
-        <!-- 7. CTA Section -->
+        <!-- 7. SNS Section -->
         <section class="cta-section collapsible-section" id="cta">
             <div class="section-toggle-header">
-                <h2 class="section-title">今すぐ始める</h2>
+                <h2 class="section-title">各種SNS</h2>
                 <span class="section-toggle-icon">▶</span>
             </div>
             <div class="section-content">
-                <p class="cta-tagline">フィルムとデジタルの境界をなくす。<br>あなただけの撮影体験を、今。</p>
                 <div class="cta-buttons">
-                    <a href="#" class="cta-btn">製品詳細を見る</a>
-                    <a href="#" class="cta-btn">取扱説明書をダウンロード</a>
+                    <a href="product.html" class="cta-btn">製品詳細を見る</a>
+                    <a href="product.html#manual" class="cta-btn">取扱説明書</a>
                 </div>
                 <div class="cta-sns">
-                    <p>SNSでフォロー</p>
                     <p>
                         <a href="https://www.instagram.com/sgwr_2695/" target="_blank" rel="noopener">Instagram: @sgwr_2695</a>
                         &nbsp;|&nbsp;
@@ -478,9 +500,13 @@
 
             if (!form || !commentList) return;
 
+            // localStorageから即座にバッジを初期化
+            const cached = JSON.parse(localStorage.getItem('comments') || '[]');
+            const badge = document.getElementById('comment-count');
+            if (badge && cached.length > 0) badge.textContent = cached.length;
+
             function renderComments(comments) {
                 commentList.innerHTML = '';
-                const badge = document.getElementById('comment-count');
                 if (badge) badge.textContent = comments.length;
 
                 comments.forEach(c => {
@@ -491,7 +517,7 @@
             }
 
             // コメントリスト全体の折りたたみ
-            const commentToggle = document.querySelector('.comment-list-toggle');
+            const commentToggle = document.getElementById('comment-list-toggle');
             if (commentToggle) {
                 commentToggle.addEventListener('click', () => {
                     document.querySelector('.comment-section').classList.toggle('comment-list-open');

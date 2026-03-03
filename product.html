@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PiCamera 製品詳細 | SGWR</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        #terminal-screen {
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        nav, footer, .product-hero, .product-body {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .product-hero {
+            text-align: center;
+            padding: 60px 20px 40px;
+            border-bottom: 2px solid rgba(55, 148, 235, 0.4);
+            margin-bottom: 30px;
+        }
+        .product-hero h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-weight: 900;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            color: rgba(55, 148, 235, 1);
+            text-shadow: 0 0 20px rgba(55, 148, 235, 0.5);
+            margin-bottom: 15px;
+        }
+        .product-hero p {
+            font-size: clamp(0.85rem, 2vw, 1.1rem);
+            letter-spacing: 3px;
+            color: rgba(255, 255, 255, 0.85);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+        }
+
+        .product-section {
+            position: relative;
+            z-index: 10;
+            padding: 30px;
+            border: 2px solid rgba(55, 148, 235, 1);
+            margin: 20px 0;
+            background: rgba(217, 235, 55, 0.8);
+            box-shadow: 0px 4px 12px 0px rgba(0, 0, 0, 0.15);
+        }
+        .product-section h2 {
+            font-size: 1.4em;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: rgba(55, 148, 235, 1);
+            text-shadow: 0 0 10px rgba(55, 148, 235, 0.4);
+            border-left: 4px solid rgba(55, 148, 235, 1);
+            padding-left: 15px;
+            margin-bottom: 25px;
+        }
+
+        .spec-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: "Orbitron", monospace;
+        }
+        .spec-table th,
+        .spec-table td {
+            padding: 12px 18px;
+            border: 2px solid rgba(55, 148, 235, 1);
+            text-align: left;
+            font-size: 0.85em;
+            letter-spacing: 1px;
+        }
+        .spec-table th {
+            color: rgba(55, 148, 235, 1);
+            background: rgba(0, 0, 0, 0.35);
+            white-space: nowrap;
+            width: 200px;
+        }
+        .spec-table td {
+            color: #fff;
+            background: rgba(0, 0, 0, 0.45);
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        .feature-list li {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(55, 148, 235, 1);
+            padding: 18px 20px;
+            font-size: 0.85em;
+            letter-spacing: 1px;
+            color: #fff;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+            line-height: 1.8;
+        }
+        .feature-list li strong {
+            display: block;
+            color: rgba(55, 148, 235, 1);
+            margin-bottom: 6px;
+            font-size: 0.9em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .manual-block {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(55, 148, 235, 1);
+            padding: 25px;
+            margin-top: 10px;
+        }
+        .manual-block p {
+            font-size: 0.85em;
+            letter-spacing: 1px;
+            line-height: 1.9;
+            color: #fff;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+            margin-bottom: 15px;
+        }
+        .manual-steps {
+            list-style: none;
+            padding: 0;
+            counter-reset: step-counter;
+        }
+        .manual-steps li {
+            counter-increment: step-counter;
+            padding: 12px 15px 12px 50px;
+            position: relative;
+            border-left: 2px solid rgba(55, 148, 235, 0.5);
+            margin-bottom: 12px;
+            font-size: 0.83em;
+            letter-spacing: 1px;
+            line-height: 1.8;
+            color: #fff;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+        }
+        .manual-steps li::before {
+            content: counter(step-counter, decimal-leading-zero);
+            position: absolute;
+            left: 10px;
+            font-size: 1.2em;
+            font-weight: 900;
+            color: rgba(55, 148, 235, 1);
+            letter-spacing: 1px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 25px;
+            color: rgba(55, 148, 235, 0.9);
+            text-decoration: none;
+            font-size: 0.85em;
+            letter-spacing: 2px;
+            border-bottom: 1px solid rgba(55, 148, 235, 0.4);
+            transition: color 0.2s;
+        }
+        .back-link:hover {
+            color: rgba(55, 148, 235, 1);
+        }
+
+        @media (max-width: 768px) {
+            .feature-list {
+                grid-template-columns: 1fr;
+            }
+            .spec-table th {
+                width: 120px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="grid-canvas"></canvas>
+    <div class="scan-line"></div>
+    <div class="scan-line scan-line-wide"></div>
+
+    <div id="terminal-screen" class="main-container">
+
+        <nav>
+            <div class="nav-left">SGWR</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="gallery.html">Gallery</a>
+                <a href="3d-experience.html">3D Experience</a>
+                <a href="faq.html">FAQ</a>
+            </div>
+        </nav>
+
+        <a href="index.html" class="back-link">← トップに戻る</a>
+
+        <div class="product-hero">
+            <h1>PiCamera</h1>
+            <p>フィルムカメラに、デジタルの魂を。</p>
+        </div>
+
+        <!-- 概要 -->
+        <section class="product-section">
+            <h2>概要</h2>
+            <ul class="feature-list">
+                <li>
+                    <strong>[CONCEPT]</strong>
+                    フィルムカメラの内部にRaspberry Pi + Pi Camera HQを搭載し、フィルムの代わりにデジタル撮影を行うシステム。アナログレンズの描写・質感はそのままに、デジタルの利便性を追加します。
+                </li>
+                <li>
+                    <strong>[TRIGGER]</strong>
+                    シャッターボタンが押されると光センサーが光量変化を検知（0.1秒以内）、即座にキャプチャ。540msの実測遅延で撮影結果をiOSアプリにWi-Fi転送。
+                </li>
+                <li>
+                    <strong>[APP]</strong>
+                    専用iOSアプリでリアルタイムプレビュー、ISO・シャッター速度の手動設定、ホワイトバランス調整、Lightroom風の写真編集が可能。
+                </li>
+                <li>
+                    <strong>[FORMAT]</strong>
+                    RAW (DNG) / JPEG 両対応。12.3メガピクセルのSony IMX477センサーによる高解像度撮影。
+                </li>
+            </ul>
+        </section>
+
+        <!-- 技術仕様 -->
+        <section class="product-section">
+            <h2>技術仕様</h2>
+            <table class="spec-table">
+                <tbody>
+                    <tr><th>センサー</th><td>Sony IMX477 (12.3MP, 1.55μmピクセル)</td></tr>
+                    <tr><th>ISO範囲</th><td>100–16000（推奨: 100–6400）</td></tr>
+                    <tr><th>シャッター速度</th><td>13μs–670秒（実用: 1秒固定）</td></tr>
+                    <tr><th>解像度</th><td>4056×3040 (RAW) / 1920×1080 (標準)</td></tr>
+                    <tr><th>検知速度</th><td>0.1–0.25秒</td></tr>
+                    <tr><th>無線</th><td>Wi-Fi 802.11n（APモード / テザリング対応）</td></tr>
+                    <tr><th>バッテリー</th><td>5V/2A（最大48時間駆動）</td></tr>
+                    <tr><th>本体</th><td>Raspberry Pi Zero 2W</td></tr>
+                    <tr><th>撮影モード</th><td>高速 / 高画質 / 標準 / 省電力（4種）</td></tr>
+                    <tr><th>対応フォーマット</th><td>RAW (DNG) / JPEG</td></tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- 主な特徴 -->
+        <section class="product-section">
+            <h2>主な特徴</h2>
+            <ul class="feature-list">
+                <li>
+                    <strong>[SENSOR] 光検知自動撮影</strong>
+                    超高速応答: 0.1秒で光の変化を検知。遅延ゼロ: 検知フレームをそのまま保存（540ms実測）。適応型露出: 撮影結果から自動でISOを調整。
+                </li>
+                <li>
+                    <strong>[CAMERA] プロ品質の写真</strong>
+                    12.3メガピクセルのPi Camera Module HQ搭載。RAW対応でDNG形式での撮影・編集が可能。4つの撮影モードで用途に応じた設定が可能。
+                </li>
+                <li>
+                    <strong>[WIRELESS] 完全ワイヤレス制御</strong>
+                    iOSアプリ専用の直感的な操作画面。Wi-Fi双方向通信で設定・プレビュー・転送。Lightroom風の写真編集機能をアプリ内で完結。
+                </li>
+                <li>
+                    <strong>[CONFIG] 高度なカスタマイズ</strong>
+                    手動露出制御でISO・シャッター速度の完全設定。ホワイトバランスのオート・マニュアル選択。ノイズ除去・シャープネスのプロ仕様調整。
+                </li>
+            </ul>
+        </section>
+
+        <!-- 取扱説明書 -->
+        <section class="product-section" id="manual">
+            <h2>取扱説明書</h2>
+            <div class="manual-block">
+                <p>以下の手順でPiCameraをセットアップし、撮影を開始できます。</p>
+                <ol class="manual-steps">
+                    <li><strong>ハードウェアセットアップ（約5分）</strong> — Raspberry Pi Zero 2WとPi Camera HQを専用ケースに組み込み、フィルムカメラの内部に設置します。バッテリーを接続し、電源を入れます。</li>
+                    <li><strong>Wi-Fi接続</strong> — iPhoneのWi-Fi設定から「PiCamera」ネットワークを選択して接続します。パスワードは同梱のカードに記載されています。</li>
+                    <li><strong>iOSアプリ起動</strong> — アプリを起動するとPiCameraに自動接続されます。ライブプレビュー画面が表示されたら準備完了です。</li>
+                    <li><strong>撮影設定</strong> — ISO・シャッター速度・ホワイトバランスを設定画面で調整します。初回はオートモード推奨です。</li>
+                    <li><strong>撮影</strong> — フィルムカメラのシャッターを押すと光センサーが反応し、自動的に撮影されます。プレビューはアプリに即表示されます。</li>
+                    <li><strong>写真編集・保存</strong> — アプリ内で露出・コントラスト・カラーグレーディングを編集し、カメラロールへ保存またはSNSへ共有します。</li>
+                    <li><strong>電源オフ</strong> — アプリの設定メニューから「シャットダウン」を選択してから電源を切ります。強制切断はデータ破損の原因になります。</li>
+                </ol>
+            </div>
+        </section>
+
+        <!-- お問い合わせ -->
+        <section class="product-section">
+            <h2>お問い合わせ・SNS</h2>
+            <div class="manual-block">
+                <p>製品についてのご質問・感想はSNSまでどうぞ。</p>
+                <p>
+                    <a href="https://www.instagram.com/sgwr_2695/" target="_blank" rel="noopener" style="color: rgba(55,148,235,1); text-decoration: none; letter-spacing: 2px;">Instagram: @sgwr_2695</a>
+                    &nbsp;&nbsp;|&nbsp;&nbsp;
+                    <a href="https://github.com/ichirooo66755" target="_blank" rel="noopener" style="color: rgba(55,148,235,1); text-decoration: none; letter-spacing: 2px;">GitHub: ichirooo66755</a>
+                </p>
+            </div>
+        </section>
+
+        <footer>
+            <p>© 2025 SGWR</p>
+        </footer>
+
+    </div>
+
+    <script src="blueprint.js"></script>
+</body>
+
+</html>
