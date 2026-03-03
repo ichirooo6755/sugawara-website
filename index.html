@@ -136,6 +136,38 @@
             text-shadow: 0 1px 3px rgba(0,0,0,0.6);
             margin-bottom: 18px;
         }
+        .call-input-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 20px;
+        }
+        .call-input-wrap label {
+            font-size: 0.75em;
+            letter-spacing: 2px;
+            color: rgba(55, 148, 235, 0.9);
+        }
+        #outfit-input {
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(55, 148, 235, 1);
+            color: #fff;
+            padding: 10px 16px;
+            font-family: "Orbitron", monospace;
+            font-size: 0.85em;
+            letter-spacing: 1px;
+            outline: none;
+            width: 280px;
+            max-width: 100%;
+            text-align: center;
+            transition: box-shadow 0.2s;
+        }
+        #outfit-input::placeholder {
+            color: rgba(255,255,255,0.35);
+        }
+        #outfit-input:focus {
+            box-shadow: 0 0 12px rgba(55, 148, 235, 0.5);
+        }
         #call-btn {
             display: inline-block;
             background: rgba(55, 148, 235, 1);
@@ -168,12 +200,61 @@
             min-height: 1.2em;
             color: rgba(55, 148, 235, 0.9);
         }
+        /* ポップアップ */
+        #call-popup {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 9000;
+            background: rgba(0, 0, 0, 0.7);
+            align-items: center;
+            justify-content: center;
+        }
+        #call-popup.active {
+            display: flex;
+        }
+        .call-popup-box {
+            background: rgba(10, 15, 25, 0.97);
+            border: 2px solid rgba(55, 148, 235, 1);
+            padding: 40px 50px;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(55, 148, 235, 0.4);
+            max-width: 340px;
+            width: 90%;
+        }
+        .call-popup-box p {
+            font-size: 1em;
+            letter-spacing: 3px;
+            color: #fff;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            margin-bottom: 8px;
+        }
+        .call-popup-box small {
+            font-size: 0.7em;
+            letter-spacing: 2px;
+            color: rgba(55, 148, 235, 0.8);
+        }
+        .call-popup-dots {
+            font-size: 1.5em;
+            letter-spacing: 4px;
+            color: rgba(55, 148, 235, 1);
+            animation: blink-dots 1.2s infinite;
+            display: block;
+            margin-top: 16px;
+        }
+        @keyframes blink-dots {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
         @media (max-width: 480px) {
             #call-btn {
                 width: 100%;
                 padding: 14px 20px;
                 font-size: 0.82em;
                 letter-spacing: 2px;
+            }
+            #outfit-input {
+                width: 100%;
             }
         }
 
@@ -283,8 +364,21 @@
         <!-- Call Button Section -->
         <div class="call-section">
             <p>実際に動かしているところを見たい方へ</p>
+            <div class="call-input-wrap">
+                <label for="outfit-input">今日の服の色</label>
+                <input id="outfit-input" type="text" placeholder="例: 黒のパーカー" maxlength="40" />
+            </div>
             <button id="call-btn">菅原を呼ぶ</button>
             <div id="call-status"></div>
+        </div>
+
+        <!-- 待機ポップアップ -->
+        <div id="call-popup">
+            <div class="call-popup-box">
+                <p>しばらくお待ちください</p>
+                <small>菅原に通知しました</small>
+                <span class="call-popup-dots">...</span>
+            </div>
         </div>
 
         <!-- Comments Section (moved above product sections) -->
@@ -667,8 +761,10 @@
 
         // 菅原を呼ぶボタン
         (function() {
-            const btn = document.getElementById('call-btn');
+            const btn    = document.getElementById('call-btn');
             const status = document.getElementById('call-status');
+            const input  = document.getElementById('outfit-input');
+            const popup  = document.getElementById('call-popup');
             if (!btn) return;
 
             // 連打防止: 送信後60秒は無効化
@@ -680,13 +776,25 @@
             }
 
             btn.addEventListener('click', async () => {
+                const outfit = input ? input.value.trim() : '';
+
+                // 服の色が未入力の場合は処理中断
+                if (!outfit) {
+                    status.textContent = '服の色を入力してください。';
+                    return;
+                }
+
                 btn.disabled = true;
                 status.textContent = '送信中...';
+
+                // ポップアップを表示
+                if (popup) popup.classList.add('active');
+
                 try {
                     const res = await fetch('/.netlify/functions/callSugawara', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: '' })
+                        body: JSON.stringify({ message: outfit ? `服の色: ${outfit}` : '' })
                     });
                     if (res.ok) {
                         status.textContent = '菅原に通知しました！';
@@ -694,10 +802,12 @@
                     } else {
                         status.textContent = '送信に失敗しました。もう一度試してください。';
                         btn.disabled = false;
+                        if (popup) popup.classList.remove('active');
                     }
                 } catch (e) {
                     status.textContent = 'エラーが発生しました。';
                     btn.disabled = false;
+                    if (popup) popup.classList.remove('active');
                 }
             });
         })();

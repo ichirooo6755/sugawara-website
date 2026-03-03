@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FAQ | 1RAW</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+    <!-- Grid Canvas Background -->
+    <canvas id="grid-canvas"></canvas>
+
+    <!-- Scan Line Effects -->
+    <div class="scan-line"></div>
+    <div class="scan-line scan-line-wide"></div>
+
+    <div id="terminal-screen" class="main-container">
+
+        <nav>
+            <div class="nav-left">1RAW</div>
+            <div class="nav-links">
+                <a href="index.html">Home</a>
+                <a href="gallery.html">Gallery</a>
+                <a href="3d-experience.html">3D Experience</a>
+                <a href="faq.html" class="active">FAQ</a>
+            </div>
+        </nav>
+
+        <header class="hero-section" style="min-height: 15vh;">
+            <div class="hero-overlay">
+                <h1 class="hero-title">FAQ</h1>
+            </div>
+        </header>
+
+        <main>
+            <section class="features-grid-section" x-data>
+                <h2 class="section-title">よくある質問</h2>
+                <div class="faq-list">
+
+                    <div class="faq-item" x-data="{ open: false }">
+                        <div class="faq-question" @click="open = !open">
+                            <span>どんなフィルムカメラに設置できますか？</span>
+                            <span class="faq-toggle" x-text="open ? '-' : '+'">+</span>
+                        </div>
+                        <div class="faq-answer" x-show="open" x-transition>
+                            35mmフィルムカメラの大部分に対応しています。詳細は対応機種リストをご確認ください。
+                        </div>
+                    </div>
+
+                    <div class="faq-item" x-data="{ open: false }">
+                        <div class="faq-question" @click="open = !open">
+                            <span>電池はどれくらい持ちますか？</span>
+                            <span class="faq-toggle" x-text="open ? '-' : '+'">+</span>
+                        </div>
+                        <div class="faq-answer" x-show="open" x-transition>
+                            標準モードで約16時間、省電力モードで最大48時間の連続駆動が可能です。
+                        </div>
+                    </div>
+
+                    <div class="faq-item" x-data="{ open: false }">
+                        <div class="faq-question" @click="open = !open">
+                            <span>既存のレンズは使えますか？</span>
+                            <span class="faq-toggle" x-text="open ? '-' : '+'">+</span>
+                        </div>
+                        <div class="faq-answer" x-show="open" x-transition>
+                            はい、フィルムカメラの純正・互換レンズをそのまま使用できます。
+                        </div>
+                    </div>
+
+                    <div class="faq-item" x-data="{ open: false }">
+                        <div class="faq-question" @click="open = !open">
+                            <span>技術的な知識は必要ですか？</span>
+                            <span class="faq-toggle" x-text="open ? '-' : '+'">+</span>
+                        </div>
+                        <div class="faq-answer" x-show="open" x-transition>
+                            不要です。専用iOSアプリで全ての操作が可能です。初期設定のみ5分程度かかります。
+                        </div>
+                    </div>
+
+                    <div class="faq-item" x-data="{ open: false }">
+                        <div class="faq-question" @click="open = !open">
+                            <span>RAW撮影はできますか？</span>
+                            <span class="faq-toggle" x-text="open ? '-' : '+'">+</span>
+                        </div>
+                        <div class="faq-answer" x-show="open" x-transition>
+                            はい、DNG形式でのRAW撮影に対応しています。Lightroom等のソフトウェアで編集可能です。
+                        </div>
+                    </div>
+
+                    <div class="faq-item" x-data="{ open: false }">
+                        <div class="faq-question" @click="open = !open">
+                            <span>Wi-Fi接続はどのように行いますか？</span>
+                            <span class="faq-toggle" x-text="open ? '-' : '+'">+</span>
+                        </div>
+                        <div class="faq-answer" x-show="open" x-transition>
+                            Raspberry PiがWi-Fiアクセスポイントとして機能します。iPhoneのWi-Fi設定から「1RAW」に接続し、専用アプリを起動してください。
+                        </div>
+                    </div>
+
+                    <div class="faq-item" x-data="{ open: false }">
+                        <div class="faq-question" @click="open = !open">
+                            <span>光検知の感度は調整できますか？</span>
+                            <span class="faq-toggle" x-text="open ? '-' : '+'">+</span>
+                        </div>
+                        <div class="faq-answer" x-show="open" x-transition>
+                            はい、iOSアプリから検知閾値を細かく調整できます。屋外・室内など撮影環境に合わせて最適化できます。
+                        </div>
+                    </div>
+
+                    <div class="faq-item" x-data="{ open: false }">
+                        <div class="faq-question" @click="open = !open">
+                            <span>写真の保存先はどこですか？</span>
+                            <span class="faq-toggle" x-text="open ? '-' : '+'">+</span>
+                        </div>
+                        <div class="faq-answer" x-show="open" x-transition>
+                            撮影した写真はRaspberry Piのストレージに保存され、Wi-Fi経由でiPhoneに転送できます。iCloud・Google フォト等のクラウドへのアップロードも対応しています。
+                        </div>
+                    </div>
+
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>© 2025 1RAW</p>
+        </footer>
+
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
+
+    <!-- Alpine.js for FAQ accordion -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Blueprint Script -->
+    <script src="blueprint.js"></script>
+</body>
+
+</html>
