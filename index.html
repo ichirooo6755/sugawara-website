@@ -60,37 +60,27 @@
             font-size: 0.75em;
             vertical-align: middle;
         }
-        .comment-item .comment-header {
+        .comment-list-toggle {
             display: flex;
             align-items: center;
             gap: 10px;
             cursor: pointer;
-            padding: 8px 0;
             user-select: none;
         }
-        .comment-item .comment-body {
-            display: none;
-            padding: 10px 0 5px 20px;
-            border-left: 2px solid rgba(55, 148, 235, 0.4);
-            margin-left: 5px;
-            white-space: pre-wrap;
-        }
-        .comment-item.open .comment-body {
-            display: block;
-        }
-        .comment-item.open .comment-toggle-icon {
-            transform: rotate(90deg);
-        }
-        .comment-toggle-icon {
+        .comment-list-toggle-icon {
             display: inline-block;
             transition: transform 0.2s;
             font-size: 0.75em;
             color: rgba(55, 148, 235, 0.8);
         }
-        .comment-date {
-            font-size: 0.75em;
-            color: rgba(255,255,255,0.5);
-            margin-left: auto;
+        #comment-list {
+            display: none;
+        }
+        .comment-list-open #comment-list {
+            display: block;
+        }
+        .comment-list-open .comment-list-toggle-icon {
+            transform: rotate(90deg);
         }
 
         /* セクション折りたたみ */
@@ -193,15 +183,18 @@
 
         <!-- Comments Section (moved above product sections) -->
         <main class="comment-section">
-            <h2>COMMENTS <span id="comment-count" class="comment-count-badge">0</span></h2>
+            <h2 class="comment-list-toggle">
+                COMMENTS <span id="comment-count" class="comment-count-badge">0</span>
+                <span class="comment-list-toggle-icon">▶</span>
+            </h2>
+
+            <ul id="comment-list"></ul>
 
             <form id="comment-form">
                 <input type="text" name="name" placeholder="お名前" required />
                 <textarea name="comment" placeholder="コメントを入力..." required></textarea>
                 <button type="submit">送信</button>
             </form>
-
-            <ul id="comment-list"></ul>
         </main>
 
         <!-- Product Content Sections -->
@@ -445,13 +438,16 @@
             <div class="section-content">
                 <p class="cta-tagline">フィルムとデジタルの境界をなくす。<br>あなただけの撮影体験を、今。</p>
                 <div class="cta-buttons">
-                    <a href="#" class="cta-btn">iOS アプリをダウンロード</a>
                     <a href="#" class="cta-btn">製品詳細を見る</a>
                     <a href="#" class="cta-btn">取扱説明書をダウンロード</a>
                 </div>
                 <div class="cta-sns">
-                    <p>SNSでフォロー — 最新情報・撮影テクニック・ユーザー作品を配信中</p>
-                    <p>Instagram: @picamera_control &nbsp;|&nbsp; Twitter: @PiCameraSystem &nbsp;|&nbsp; YouTube: PiCamera Control公式チャンネル</p>
+                    <p>SNSでフォロー</p>
+                    <p>
+                        <a href="https://www.instagram.com/sgwr_2695/" target="_blank" rel="noopener">Instagram: @sgwr_2695</a>
+                        &nbsp;|&nbsp;
+                        <a href="https://github.com/ichirooo66755" target="_blank" rel="noopener">GitHub: ichirooo66755</a>
+                    </p>
                 </div>
             </div>
         </section>
@@ -489,22 +485,16 @@
 
                 comments.forEach(c => {
                     const li = document.createElement('li');
-                    li.className = 'comment-item';
-                    const date = c.createdAt
-                        ? new Date(c.createdAt).toLocaleDateString('ja-JP')
-                        : '';
-                    li.innerHTML = `
-                      <div class="comment-header">
-                        <span class="comment-toggle-icon">▶</span>
-                        <strong class="comment-name">${c.name}</strong>
-                        <span class="comment-date">${date}</span>
-                      </div>
-                      <div class="comment-body">${c.comment}</div>
-                    `;
-                    li.querySelector('.comment-header').addEventListener('click', () => {
-                        li.classList.toggle('open');
-                    });
+                    li.innerHTML = `<strong>${c.name}</strong>: ${c.comment}`;
                     commentList.appendChild(li);
+                });
+            }
+
+            // コメントリスト全体の折りたたみ
+            const commentToggle = document.querySelector('.comment-list-toggle');
+            if (commentToggle) {
+                commentToggle.addEventListener('click', () => {
+                    document.querySelector('.comment-section').classList.toggle('comment-list-open');
                 });
             }
 
