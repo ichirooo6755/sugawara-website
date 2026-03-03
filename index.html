@@ -12,12 +12,12 @@
             visibility: visible !important;
             opacity: 1 !important;
         }
-        
+
         nav, .hero-section, .tagline-section, .comment-section, footer {
             visibility: visible;
             opacity: 0;
         }
-        
+
         /* Tagline section between header and comments */
         .tagline-section {
             text-align: center;
@@ -25,7 +25,7 @@
             position: relative;
             z-index: 10;
         }
-        
+
         .tagline {
             font-size: clamp(1.2rem, 3.5vw, 2.5rem);
             font-weight: 700;
@@ -43,11 +43,97 @@
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
             margin-top: 15px;
         }
-        
+
         /* Comment list visible */
         #comment-list li {
             opacity: 1;
             visibility: visible;
+        }
+
+        /* コメント折りたたみ */
+        .comment-count-badge {
+            display: inline-block;
+            background: rgba(55, 148, 235, 0.2);
+            border: 1px solid rgba(55, 148, 235, 0.6);
+            border-radius: 20px;
+            padding: 2px 10px;
+            font-size: 0.75em;
+            vertical-align: middle;
+        }
+        .comment-item .comment-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            padding: 8px 0;
+            user-select: none;
+        }
+        .comment-item .comment-body {
+            display: none;
+            padding: 10px 0 5px 20px;
+            border-left: 2px solid rgba(55, 148, 235, 0.4);
+            margin-left: 5px;
+            white-space: pre-wrap;
+        }
+        .comment-item.open .comment-body {
+            display: block;
+        }
+        .comment-item.open .comment-toggle-icon {
+            transform: rotate(90deg);
+        }
+        .comment-toggle-icon {
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 0.75em;
+            color: rgba(55, 148, 235, 0.8);
+        }
+        .comment-date {
+            font-size: 0.75em;
+            color: rgba(255,255,255,0.5);
+            margin-left: auto;
+        }
+
+        /* セクション折りたたみ */
+        .collapsible-section .section-toggle-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+            padding: 5px 0;
+        }
+        .collapsible-section .section-toggle-header:hover .section-title {
+            opacity: 0.8;
+        }
+        .section-toggle-icon {
+            display: inline-block;
+            transition: transform 0.2s;
+            font-size: 0.85em;
+            color: rgba(55, 148, 235, 0.8);
+        }
+        .collapsible-section .section-content {
+            display: none;
+            overflow: hidden;
+        }
+        .collapsible-section.open .section-content {
+            display: block;
+        }
+        .collapsible-section.open .section-toggle-icon {
+            transform: rotate(90deg);
+        }
+
+        /* Whyセクション用トグルヘッダー */
+        .why-section .section-toggle-header {
+            border-bottom: 1px solid rgba(55, 148, 235, 0.3);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+        }
+        .why-section .section-toggle-header h2 {
+            font-size: 1.2em;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: rgba(55, 148, 235, 1);
+            margin: 0;
         }
     </style>
 </head>
@@ -69,10 +155,10 @@
             height: 100%;
         }
     </style>
-    
+
     <!-- Grid Canvas Background -->
     <canvas id="grid-canvas"></canvas>
-    
+
     <!-- Scan Line Effects -->
     <div class="scan-line"></div>
     <div class="scan-line scan-line-wide"></div>
@@ -105,224 +191,9 @@
             </div>
         </section>
 
-        <!-- Product Content Sections -->
-
-        <!-- 1. Why Section -->
-        <section class="why-section">
-            <div class="why-card">
-                <div class="why-icon">[FILM]</div>
-                <h3>フィルムの魅力はそのままに</h3>
-                <p>アナログレンズの独特の写り、フィルムならではの質感をそのまま活かします。大切なカメラを改造せず、内蔵するだけ。</p>
-            </div>
-            <div class="why-card">
-                <div class="why-icon">[DIGITAL]</div>
-                <h3>デジタルの便利さを追加</h3>
-                <p>撮影結果を即確認、Wi-Fiで転送、iOSアプリで編集。現像不要、シャッターを切ったその場でプレビュー。</p>
-            </div>
-            <div class="why-card">
-                <div class="why-icon">[COST]</div>
-                <h3>コスト効率</h3>
-                <p>フィルム代・現像代がゼロに。1回のセットアップで無制限に撮影可能。投資回収は数ヶ月以内。</p>
-            </div>
-        </section>
-
-        <!-- 2. Features Grid -->
-        <section class="features-grid-section" id="features">
-            <h2 class="section-title">主な特徴</h2>
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">[SENSOR]</div>
-                    <h3>光検知自動撮影</h3>
-                    <ul>
-                        <li>超高速応答: 0.1秒で光の変化を検知</li>
-                        <li>遅延ゼロ: 検知フレームをそのまま保存（540ms実測）</li>
-                        <li>適応型露出: 撮影結果から自動でISOを調整</li>
-                    </ul>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">[CAMERA]</div>
-                    <h3>プロ品質の写真</h3>
-                    <ul>
-                        <li>12.3メガピクセル: Pi Camera Module HQ搭載</li>
-                        <li>RAW対応: DNG形式での撮影・編集可能</li>
-                        <li>4つの撮影モード: 高速・高画質・標準・省電力</li>
-                    </ul>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">[WIRELESS]</div>
-                    <h3>完全ワイヤレス制御</h3>
-                    <ul>
-                        <li>iOSアプリ専用: 直感的な操作画面</li>
-                        <li>Wi-Fi双方向通信: 設定・プレビュー・転送</li>
-                        <li>モバイル編集: Lightroom風の写真編集機能</li>
-                    </ul>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon">[CONFIG]</div>
-                    <h3>高度なカスタマイズ</h3>
-                    <ul>
-                        <li>手動露出制御: ISO・シャッター速度の完全設定</li>
-                        <li>ホワイトバランス: オート・マニュアル選択</li>
-                        <li>ノイズ除去・シャープネス: プロ仕様の調整</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- 3. Steps Section -->
-        <section class="steps-section">
-            <h2 class="section-title">使い方</h2>
-            <div class="steps-list">
-                <div class="step-item">
-                    <div class="step-number">01</div>
-                    <div class="step-content">
-                        <h3>セットアップ</h3>
-                        <p>Piをフィルムカメラ内部に設置（5分）</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-number">02</div>
-                    <div class="step-content">
-                        <h3>Wi-Fi接続</h3>
-                        <p>iPhoneで「PiCamera」に接続</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-number">03</div>
-                    <div class="step-content">
-                        <h3>アプリ起動</h3>
-                        <p>カメラ設定・プレビュー・撮影</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-number">04</div>
-                    <div class="step-content">
-                        <h3>写真編集</h3>
-                        <p>iOSアプリでプロ並みの補正</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <div class="step-number">05</div>
-                    <div class="step-content">
-                        <h3>共有・保存</h3>
-                        <p>クラウド・SNSへのアップロード</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 4. Specs Section -->
-        <section class="specs-section">
-            <h2 class="section-title">技術仕様</h2>
-            <table class="specs-table">
-                <tbody>
-                    <tr>
-                        <th>センサー</th>
-                        <td>Sony IMX477 (12.3MP, 1.55μmピクセル)</td>
-                    </tr>
-                    <tr>
-                        <th>ISO範囲</th>
-                        <td>100-16000 (推奨: 100-6400)</td>
-                    </tr>
-                    <tr>
-                        <th>シャッター</th>
-                        <td>13μs-670秒 (実用: 1秒固定)</td>
-                    </tr>
-                    <tr>
-                        <th>解像度</th>
-                        <td>4056×3040 (RAW) / 1920×1080 (標準)</td>
-                    </tr>
-                    <tr>
-                        <th>検知速度</th>
-                        <td>0.1-0.25秒</td>
-                    </tr>
-                    <tr>
-                        <th>無線</th>
-                        <td>Wi-Fi 802.11n (AP/テザリング)</td>
-                    </tr>
-                    <tr>
-                        <th>バッテリー</th>
-                        <td>5V/2A (最大48時間駆動)</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
-
-        <!-- 5. Usecases Section -->
-        <section class="usecases-section">
-            <h2 class="section-title">ユースケース</h2>
-            <div class="usecases-grid">
-                <div class="usecase-card">
-                    <h3>[FILM] フィルムカメラ愛好者</h3>
-                    <ul>
-                        <li>現像の手間とコストを削減</li>
-                        <li>撮影結果を即時に確認</li>
-                        <li>デジタルアーカイブの構築</li>
-                    </ul>
-                </div>
-                <div class="usecase-card">
-                    <h3>[ART] クリエイター</h3>
-                    <ul>
-                        <li>レンズの味わいを活かした作品制作</li>
-                        <li>高解像度RAWデータでの編集</li>
-                        <li>独自の撮影スタイルの確立</li>
-                    </ul>
-                </div>
-                <div class="usecase-card">
-                    <h3>[LAB] 技術者・研究者</h3>
-                    <ul>
-                        <li>光検知アルゴリズムの応用</li>
-                        <li>長期間・定点観測撮影</li>
-                        <li>実験記録の自動化</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- 6. Pricing Section -->
-        <section class="pricing-section" id="pricing">
-            <h2 class="section-title">価格と購入</h2>
-            <div class="pricing-grid">
-                <div class="pricing-card pricing-card--featured">
-                    <h3>基本セット（完成品）</h3>
-                    <div class="pricing-price">¥49,800</div>
-                    <ul>
-                        <li>Raspberry Pi Zero 2W + Pi Camera HQ</li>
-                        <li>専用ケース（フィルムカメラ内蔵用）</li>
-                        <li>iOSアプリ（ライセンス込）</li>
-                        <li>取扱説明書・設定ガイド</li>
-                    </ul>
-                </div>
-                <div class="pricing-card">
-                    <h3>DIYキット</h3>
-                    <div class="pricing-price">¥29,800</div>
-                    <ul>
-                        <li>全コンポーネント一式</li>
-                        <li>詳細な組立説明書</li>
-                        <li>ソフトウェアライセンス</li>
-                        <li>技術サポート（1ヶ月）</li>
-                    </ul>
-                </div>
-            </div>
-        </section>
-
-        <!-- 7. CTA Section -->
-        <section class="cta-section">
-            <h2>今すぐ始める</h2>
-            <p class="cta-tagline">フィルムとデジタルの境界をなくす。<br>あなただけの撮影体験を、今。</p>
-            <div class="cta-buttons">
-                <a href="#" class="cta-btn">iOS アプリをダウンロード</a>
-                <a href="#" class="cta-btn">製品詳細を見る</a>
-                <a href="#" class="cta-btn">取扱説明書をダウンロード</a>
-            </div>
-            <div class="cta-sns">
-                <p>SNSでフォロー — 最新情報・撮影テクニック・ユーザー作品を配信中</p>
-                <p>Instagram: @picamera_control &nbsp;|&nbsp; Twitter: @PiCameraSystem &nbsp;|&nbsp; YouTube: PiCamera Control公式チャンネル</p>
-            </div>
-        </section>
-
+        <!-- Comments Section (moved above product sections) -->
         <main class="comment-section">
-            <h2>COMMENTS</h2>
+            <h2>COMMENTS <span id="comment-count" class="comment-count-badge">0</span></h2>
 
             <form id="comment-form">
                 <input type="text" name="name" placeholder="お名前" required />
@@ -332,6 +203,258 @@
 
             <ul id="comment-list"></ul>
         </main>
+
+        <!-- Product Content Sections -->
+
+        <!-- 1. Why Section -->
+        <section class="why-section collapsible-section" id="why">
+            <div class="section-toggle-header">
+                <h2>PiCameraを選ぶ理由</h2>
+                <span class="section-toggle-icon">▶</span>
+            </div>
+            <div class="section-content">
+                <div class="why-card">
+                    <div class="why-icon">[FILM]</div>
+                    <h3>フィルムの魅力はそのままに</h3>
+                    <p>アナログレンズの独特の写り、フィルムならではの質感をそのまま活かします。大切なカメラを改造せず、内蔵するだけ。</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">[DIGITAL]</div>
+                    <h3>デジタルの便利さを追加</h3>
+                    <p>撮影結果を即確認、Wi-Fiで転送、iOSアプリで編集。現像不要、シャッターを切ったその場でプレビュー。</p>
+                </div>
+                <div class="why-card">
+                    <div class="why-icon">[COST]</div>
+                    <h3>コスト効率</h3>
+                    <p>フィルム代・現像代がゼロに。1回のセットアップで無制限に撮影可能。投資回収は数ヶ月以内。</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. Features Grid -->
+        <section class="features-grid-section collapsible-section" id="features">
+            <div class="section-toggle-header">
+                <h2 class="section-title">主な特徴</h2>
+                <span class="section-toggle-icon">▶</span>
+            </div>
+            <div class="section-content">
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">[SENSOR]</div>
+                        <h3>光検知自動撮影</h3>
+                        <ul>
+                            <li>超高速応答: 0.1秒で光の変化を検知</li>
+                            <li>遅延ゼロ: 検知フレームをそのまま保存（540ms実測）</li>
+                            <li>適応型露出: 撮影結果から自動でISOを調整</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">[CAMERA]</div>
+                        <h3>プロ品質の写真</h3>
+                        <ul>
+                            <li>12.3メガピクセル: Pi Camera Module HQ搭載</li>
+                            <li>RAW対応: DNG形式での撮影・編集可能</li>
+                            <li>4つの撮影モード: 高速・高画質・標準・省電力</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">[WIRELESS]</div>
+                        <h3>完全ワイヤレス制御</h3>
+                        <ul>
+                            <li>iOSアプリ専用: 直感的な操作画面</li>
+                            <li>Wi-Fi双方向通信: 設定・プレビュー・転送</li>
+                            <li>モバイル編集: Lightroom風の写真編集機能</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">[CONFIG]</div>
+                        <h3>高度なカスタマイズ</h3>
+                        <ul>
+                            <li>手動露出制御: ISO・シャッター速度の完全設定</li>
+                            <li>ホワイトバランス: オート・マニュアル選択</li>
+                            <li>ノイズ除去・シャープネス: プロ仕様の調整</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. Steps Section -->
+        <section class="steps-section collapsible-section" id="steps">
+            <div class="section-toggle-header">
+                <h2 class="section-title">使い方</h2>
+                <span class="section-toggle-icon">▶</span>
+            </div>
+            <div class="section-content">
+                <div class="steps-list">
+                    <div class="step-item">
+                        <div class="step-number">01</div>
+                        <div class="step-content">
+                            <h3>セットアップ</h3>
+                            <p>Piをフィルムカメラ内部に設置（5分）</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">02</div>
+                        <div class="step-content">
+                            <h3>Wi-Fi接続</h3>
+                            <p>iPhoneで「PiCamera」に接続</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">03</div>
+                        <div class="step-content">
+                            <h3>アプリ起動</h3>
+                            <p>カメラ設定・プレビュー・撮影</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">04</div>
+                        <div class="step-content">
+                            <h3>写真編集</h3>
+                            <p>iOSアプリでプロ並みの補正</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-number">05</div>
+                        <div class="step-content">
+                            <h3>共有・保存</h3>
+                            <p>クラウド・SNSへのアップロード</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. Specs Section -->
+        <section class="specs-section collapsible-section" id="specs">
+            <div class="section-toggle-header">
+                <h2 class="section-title">技術仕様</h2>
+                <span class="section-toggle-icon">▶</span>
+            </div>
+            <div class="section-content">
+                <table class="specs-table">
+                    <tbody>
+                        <tr>
+                            <th>センサー</th>
+                            <td>Sony IMX477 (12.3MP, 1.55μmピクセル)</td>
+                        </tr>
+                        <tr>
+                            <th>ISO範囲</th>
+                            <td>100-16000 (推奨: 100-6400)</td>
+                        </tr>
+                        <tr>
+                            <th>シャッター</th>
+                            <td>13μs-670秒 (実用: 1秒固定)</td>
+                        </tr>
+                        <tr>
+                            <th>解像度</th>
+                            <td>4056×3040 (RAW) / 1920×1080 (標準)</td>
+                        </tr>
+                        <tr>
+                            <th>検知速度</th>
+                            <td>0.1-0.25秒</td>
+                        </tr>
+                        <tr>
+                            <th>無線</th>
+                            <td>Wi-Fi 802.11n (AP/テザリング)</td>
+                        </tr>
+                        <tr>
+                            <th>バッテリー</th>
+                            <td>5V/2A (最大48時間駆動)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 5. Usecases Section -->
+        <section class="usecases-section collapsible-section" id="usecases">
+            <div class="section-toggle-header">
+                <h2 class="section-title">ユースケース</h2>
+                <span class="section-toggle-icon">▶</span>
+            </div>
+            <div class="section-content">
+                <div class="usecases-grid">
+                    <div class="usecase-card">
+                        <h3>[FILM] フィルムカメラ愛好者</h3>
+                        <ul>
+                            <li>現像の手間とコストを削減</li>
+                            <li>撮影結果を即時に確認</li>
+                            <li>デジタルアーカイブの構築</li>
+                        </ul>
+                    </div>
+                    <div class="usecase-card">
+                        <h3>[ART] クリエイター</h3>
+                        <ul>
+                            <li>レンズの味わいを活かした作品制作</li>
+                            <li>高解像度RAWデータでの編集</li>
+                            <li>独自の撮影スタイルの確立</li>
+                        </ul>
+                    </div>
+                    <div class="usecase-card">
+                        <h3>[LAB] 技術者・研究者</h3>
+                        <ul>
+                            <li>光検知アルゴリズムの応用</li>
+                            <li>長期間・定点観測撮影</li>
+                            <li>実験記録の自動化</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. Pricing Section -->
+        <section class="pricing-section collapsible-section" id="pricing">
+            <div class="section-toggle-header">
+                <h2 class="section-title">価格と購入</h2>
+                <span class="section-toggle-icon">▶</span>
+            </div>
+            <div class="section-content">
+                <div class="pricing-grid">
+                    <div class="pricing-card pricing-card--featured">
+                        <h3>基本セット（完成品）</h3>
+                        <div class="pricing-price">¥49,800</div>
+                        <ul>
+                            <li>Raspberry Pi Zero 2W + Pi Camera HQ</li>
+                            <li>専用ケース（フィルムカメラ内蔵用）</li>
+                            <li>iOSアプリ（ライセンス込）</li>
+                            <li>取扱説明書・設定ガイド</li>
+                        </ul>
+                    </div>
+                    <div class="pricing-card">
+                        <h3>DIYキット</h3>
+                        <div class="pricing-price">¥29,800</div>
+                        <ul>
+                            <li>全コンポーネント一式</li>
+                            <li>詳細な組立説明書</li>
+                            <li>ソフトウェアライセンス</li>
+                            <li>技術サポート（1ヶ月）</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 7. CTA Section -->
+        <section class="cta-section collapsible-section" id="cta">
+            <div class="section-toggle-header">
+                <h2 class="section-title">今すぐ始める</h2>
+                <span class="section-toggle-icon">▶</span>
+            </div>
+            <div class="section-content">
+                <p class="cta-tagline">フィルムとデジタルの境界をなくす。<br>あなただけの撮影体験を、今。</p>
+                <div class="cta-buttons">
+                    <a href="#" class="cta-btn">iOS アプリをダウンロード</a>
+                    <a href="#" class="cta-btn">製品詳細を見る</a>
+                    <a href="#" class="cta-btn">取扱説明書をダウンロード</a>
+                </div>
+                <div class="cta-sns">
+                    <p>SNSでフォロー — 最新情報・撮影テクニック・ユーザー作品を配信中</p>
+                    <p>Instagram: @picamera_control &nbsp;|&nbsp; Twitter: @PiCameraSystem &nbsp;|&nbsp; YouTube: PiCamera Control公式チャンネル</p>
+                </div>
+            </div>
+        </section>
 
         <footer>
             <p>© 2025 SGWR</p>
@@ -345,29 +468,46 @@
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="ascii-effect.js"></script>
-    
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.2/anime.min.js"></script>
-    
+
     <!-- Blueprint Script -->
     <script src="blueprint.js"></script>
-    
+
     <!-- Comments Script -->
     <script>
         (function() {
             const form = document.getElementById('comment-form');
             const commentList = document.getElementById('comment-list');
-            
+
             if (!form || !commentList) return;
-            
+
             function renderComments(comments) {
                 commentList.innerHTML = '';
+                const badge = document.getElementById('comment-count');
+                if (badge) badge.textContent = comments.length;
+
                 comments.forEach(c => {
                     const li = document.createElement('li');
-                    li.innerHTML = `<strong>${c.name}</strong>: ${c.comment}`;
+                    li.className = 'comment-item';
+                    const date = c.createdAt
+                        ? new Date(c.createdAt).toLocaleDateString('ja-JP')
+                        : '';
+                    li.innerHTML = `
+                      <div class="comment-header">
+                        <span class="comment-toggle-icon">▶</span>
+                        <strong class="comment-name">${c.name}</strong>
+                        <span class="comment-date">${date}</span>
+                      </div>
+                      <div class="comment-body">${c.comment}</div>
+                    `;
+                    li.querySelector('.comment-header').addEventListener('click', () => {
+                        li.classList.toggle('open');
+                    });
                     commentList.appendChild(li);
                 });
             }
-            
+
             async function fetchComments() {
                 try {
                     const res = await fetch('/.netlify/functions/getComments');
@@ -378,7 +518,7 @@
                         return;
                     }
                 } catch (e) {}
-                
+
                 try {
                     const res = await fetch('./comments.json');
                     if (res.ok) {
@@ -388,19 +528,19 @@
                         return;
                     }
                 } catch (e) {}
-                
+
                 const local = JSON.parse(localStorage.getItem('comments') || '[]');
                 renderComments(local);
             }
-            
+
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const name = form.name.value.trim();
                 const comment = form.comment.value.trim();
                 if (!name || !comment) return;
-                
+
                 const newComment = { name, comment, createdAt: new Date().toISOString() };
-                
+
                 try {
                     const res = await fetch('/.netlify/functions/addComment', {
                         method: 'POST',
@@ -413,16 +553,25 @@
                         return;
                     }
                 } catch (e) {}
-                
+
                 const local = JSON.parse(localStorage.getItem('comments') || '[]');
                 local.push(newComment);
                 localStorage.setItem('comments', JSON.stringify(local));
                 renderComments(local);
                 form.reset();
             });
-            
+
             fetchComments();
         })();
+
+        // Section collapsible toggle
+        document.querySelectorAll('.collapsible-section').forEach(section => {
+            const header = section.querySelector('.section-toggle-header');
+            if (!header) return;
+            header.addEventListener('click', () => {
+                section.classList.toggle('open');
+            });
+        });
     </script>
 </body>
 
