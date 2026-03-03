@@ -103,6 +103,19 @@
         @media (max-width: 768px) {
             .why-section.open .section-content {
                 grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            .tagline-section {
+                padding: 25px 15px;
+            }
+            .tagline-sub {
+                letter-spacing: 2px;
+                font-size: clamp(0.8rem, 3vw, 1.1rem);
+            }
+            .comment-list-toggle {
+                font-size: 0.8em;
+                padding: 10px 12px;
+                letter-spacing: 1px;
             }
         }
 
@@ -166,6 +179,11 @@
             display: block;
             width: 100%;
             height: 100%;
+        }
+        @media (max-width: 768px) {
+            #ascii-container {
+                height: 35vh;
+            }
         }
     </style>
 
@@ -350,6 +368,7 @@
                 <span class="section-toggle-icon">▶</span>
             </div>
             <div class="section-content">
+                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
                 <table class="specs-table">
                     <tbody>
                         <tr>
@@ -382,6 +401,7 @@
                         </tr>
                     </tbody>
                 </table>
+                </div>
             </div>
         </section>
 
