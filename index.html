@@ -119,6 +119,64 @@
             }
         }
 
+        /* 菅原を呼ぶボタン */
+        .call-section {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 25px 20px;
+            border: 2px solid rgba(55, 148, 235, 0.6);
+            margin: 15px 0;
+            background: rgba(0, 0, 0, 0.35);
+        }
+        .call-section p {
+            font-size: 0.78em;
+            letter-spacing: 2px;
+            color: rgba(255, 255, 255, 0.65);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+            margin-bottom: 18px;
+        }
+        #call-btn {
+            display: inline-block;
+            background: rgba(55, 148, 235, 1);
+            border: 2px solid rgba(55, 148, 235, 1);
+            color: #d9eb37;
+            padding: 14px 36px;
+            font-family: "Orbitron", monospace;
+            font-size: 0.9em;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 220px;
+        }
+        #call-btn:hover:not(:disabled) {
+            background: #fff;
+            border-color: #fff;
+            color: #000;
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.4);
+        }
+        #call-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        #call-status {
+            margin-top: 12px;
+            font-size: 0.75em;
+            letter-spacing: 2px;
+            min-height: 1.2em;
+            color: rgba(55, 148, 235, 0.9);
+        }
+        @media (max-width: 480px) {
+            #call-btn {
+                width: 100%;
+                padding: 14px 20px;
+                font-size: 0.82em;
+                letter-spacing: 2px;
+            }
+        }
+
         /* セクション折りたたみ */
         .collapsible-section .section-toggle-header {
             display: flex;
@@ -221,6 +279,13 @@
                 <a href="#pricing" class="hero-cta-btn hero-cta-btn--outline">価格を確認</a>
             </div>
         </section>
+
+        <!-- Call Button Section -->
+        <div class="call-section">
+            <p>実際に動かしているところを見たい方へ</p>
+            <button id="call-btn">菅原を呼ぶ</button>
+            <div id="call-status"></div>
+        </div>
 
         <!-- Comments Section (moved above product sections) -->
         <main class="comment-section">
@@ -598,6 +663,43 @@
             });
 
             fetchComments();
+        })();
+
+        // 菅原を呼ぶボタン
+        (function() {
+            const btn = document.getElementById('call-btn');
+            const status = document.getElementById('call-status');
+            if (!btn) return;
+
+            // 連打防止: 送信後60秒は無効化
+            const COOLDOWN_MS = 60 * 1000;
+            const lastSent = parseInt(localStorage.getItem('callSentAt') || '0', 10);
+            if (Date.now() - lastSent < COOLDOWN_MS) {
+                btn.disabled = true;
+                status.textContent = '送信済みです（少し待ってください）';
+            }
+
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                status.textContent = '送信中...';
+                try {
+                    const res = await fetch('/.netlify/functions/callSugawara', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message: '' })
+                    });
+                    if (res.ok) {
+                        status.textContent = '菅原に通知しました！';
+                        localStorage.setItem('callSentAt', String(Date.now()));
+                    } else {
+                        status.textContent = '送信に失敗しました。もう一度試してください。';
+                        btn.disabled = false;
+                    }
+                } catch (e) {
+                    status.textContent = 'エラーが発生しました。';
+                    btn.disabled = false;
+                }
+            });
         })();
 
         // Section collapsible toggle
