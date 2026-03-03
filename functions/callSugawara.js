@@ -1,5 +1,5 @@
 // functions/callSugawara.js
-// 「菅原を呼ぶ」ボタンが押されたら LINE Notify で通知を送る
+// 「菅原を呼ぶ」ボタンが押されたら Telegram Bot で通知を送る
 
 export async function handler(event) {
   // CORS preflight
@@ -14,54 +14,47 @@ export async function handler(event) {
     return { statusCode: 405, headers: { 'Access-Control-Allow-Origin': '*' }, body: 'Method Not Allowed' };
   }
 
-  const TOKEN = process.env.LINE_NOTIFY_TOKEN;
-  if (!TOKEN) {
+  const TOKEN   = process.env.TELEGRAM_BOT_TOKEN;
+  const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+
+  if (!TOKEN || !CHAT_ID) {
     return {
       statusCode: 500,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: 'LINE_NOTIFY_TOKEN が設定されていません' })
+      body: JSON.stringify({ error: 'Telegram credentials not configured' })
     };
   }
 
-  // 送信者のメッセージ（任意）
-  let senderMsg = '';
-  try {
-    const body = JSON.parse(event.body || '{}');
-    if (body.message) senderMsg = `\nメッセージ: ${body.message}`;
-  } catch (e) {}
-
   const now = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' });
-  const message = `\n【1RAW デモサイト】\n誰かがあなたを呼んでいます！${senderMsg}\n時刻: ${now}\nhttps://sgwr-website.netlify.app`;
+  const text = `🔔 *1RAW デモサイト*\n誰かがあなたを呼んでいます！\n🕐 ${now}`;
 
   try {
-    const res = await fetch('https://notify-api.line.me/api/notify', {
+    const res = await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: `message=${encodeURIComponent(message)}`
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: CHAT_ID, text, parse_mode: 'Markdown' })
     });
 
-    if (res.ok) {
+    const data = await res.json();
+
+    if (data.ok) {
       return {
         statusCode: 200,
         headers: { 'Access-Control-Allow-Origin': '*' },
         body: JSON.stringify({ success: true })
       };
     } else {
-      const text = await res.text();
       return {
-        statusCode: res.status,
+        statusCode: 500,
         headers: { 'Access-Control-Allow-Origin': '*' },
-        body: JSON.stringify({ error: '送信失敗', detail: text })
+        body: JSON.stringify({ error: data.description })
       };
     }
   } catch (err) {
     return {
       statusCode: 500,
       headers: { 'Access-Control-Allow-Origin': '*' },
-      body: JSON.stringify({ error: '内部エラー', detail: String(err) })
+      body: JSON.stringify({ error: String(err) })
     };
   }
 }
